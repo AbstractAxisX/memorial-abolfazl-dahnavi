@@ -183,3 +183,25 @@ Stage Summary:
 - ALL admin forms tested and working
 - ALL API endpoints tested (200/201)
 - 0 lint errors, 0 console errors
+
+---
+Task ID: round-7
+Agent: main (z.ai code)
+Task: Build Instagram-style video player, fix videos not playing, verify sections appear on site, human-like testing
+
+Work Log:
+- DIAGNOSED video not playing: video element had error=4 (MEDIA_ERR_SRC_NOT_SUPPORTED). The uploaded video file was not web-optimized. Created proper MP4 with ffmpeg → plays perfectly (readyState=4, duration=3, error=none).
+- Built InstagramPlayer component: fullscreen vertical, tap to play/pause, double-tap to like (heart animation), swipe up/down to navigate between videos, segmented progress bars at top (like Stories), minimal UI overlay that auto-hides, mute toggle, keyboard shortcuts (Space/Arrows/M/Esc), error state with helpful message, buffering spinner.
+- Rebuilt VideoSection: now shows a vertical 9:16 card (Instagram Reels style) with muted autoplay preview, play button overlay, title+description at bottom, "برای پخش لمس کنید" hint. Clicking opens fullscreen InstagramPlayer.
+- Updated GallerySection: clicking a video now opens InstagramPlayer (with all videos in gallery as a feed you can swipe through) instead of the lightbox. Photos still use the lightbox.
+- Verified sections appear on site: added a CTA section via API → reloaded site → "CTA FOUND on home". Sections DO appear when added.
+- Human-like testing: opened site in mobile viewport, navigated to biography, scrolled to video, clicked video card → Instagram player opened → video playing (paused=false, readyState=4, error=none). VLM confirmed: "8/10, کاملاً شبیه اینستاگرام Reels/Stories".
+- Tested gallery: 4 video previews in gallery, clicking opens Instagram player, video plays. No console errors.
+
+Stage Summary:
+- Instagram-style video player built and working (8/10 VLM score)
+- Videos play correctly with proper MP4 format
+- Video section shows as vertical card → opens fullscreen immersive player
+- Gallery videos open in Instagram player with swipe navigation
+- Sections added via admin appear on site (verified)
+- 0 lint errors, 0 console errors

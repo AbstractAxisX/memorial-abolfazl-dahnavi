@@ -14,6 +14,7 @@ import { fontFamilyFor } from "@/lib/fonts"
 import { OrnamentDivider, SectionTitle } from "./ornaments"
 import { DecorativeBg } from "./decorative-bg"
 import { VideoPlayer } from "./video-player"
+import { InstagramPlayer, type ReelVideo } from "./instagram-player"
 import { toPersianDigits } from "./biography-view"
 import { Lightbox } from "./lightbox"
 
@@ -249,6 +250,8 @@ function GallerySection({ section, media }: { section: Section; media: MediaFile
   const cfg = parseConfig<{ items: GalleryItemT[]; filterable: boolean; columns: number; source: string; category: string }>(section, { items: [], filterable: true, columns: 3, source: "manual", category: "" })
   const [filter, setFilter] = useState<"all" | "photo" | "video">("all")
   const [lbIndex, setLbIndex] = useState<number | null>(null)
+  const [igVideos, setIgVideos] = useState<ReelVideo[] | null>(null)
+  const [igStartIndex, setIgStartIndex] = useState(0)
 
   // Build items: either from config (manual) or from media library
   const items: GalleryItemT[] = useMemo(() => {
@@ -317,7 +320,17 @@ function GallerySection({ section, media }: { section: Section; media: MediaFile
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.85 }}
                   transition={{ duration: 0.4, delay: i * 0.03 }}
-                  onClick={() => setLbIndex(i)}
+                  onClick={() => {
+                    if (item.type === "video") {
+                      // Open Instagram-style player for videos
+                      const vids = filtered.filter((it) => it.type === "video").map((it) => ({ url: it.url, title: it.caption, description: it.description }))
+                      const vidIdx = vids.findIndex((v) => v.url === item.url)
+                      setIgVideos(vids)
+                      setIgStartIndex(vidIdx >= 0 ? vidIdx : 0)
+                    } else {
+                      setLbIndex(i)
+                    }
+                  }}
                   className={`group relative overflow-hidden rounded-xl border border-[oklch(0.76_0.14_80/0.2)] bg-ivory shadow-sm hover:shadow-xl transition-shadow ${span}`}
                 >
                   {item.type === "video" ? (
@@ -344,7 +357,12 @@ function GallerySection({ section, media }: { section: Section; media: MediaFile
           </AnimatePresence>
         </motion.div>
       </div>
-      <Lightbox items={filtered.map((i) => ({ id: i.url, type: i.type, url: i.url, thumb: i.thumb ?? null, caption: i.caption ?? null, order: 0, createdAt: "", updatedAt: "" }))} index={lbIndex} onClose={() => setLbIndex(null)} onNavigate={setLbIndex} />
+      <Lightbox items={filtered.filter((i) => i.type !== "video").map((i) => ({ id: i.url, type: i.type, url: i.url, thumb: i.thumb ?? null, caption: i.caption ?? null, order: 0, createdAt: "", updatedAt: "" }))} index={lbIndex} onClose={() => setLbIndex(null)} onNavigate={setLbIndex} />
+      <AnimatePresence>
+        {igVideos && (
+          <InstagramPlayer videos={igVideos} startIndex={igStartIndex} onClose={() => setIgVideos(null)} />
+        )}
+      </AnimatePresence>
     </section>
   )
 }
@@ -453,18 +471,78 @@ function useEffectInterval(fn: () => void | (() => void), deps: unknown[]) {
 // ============ VIDEO ============
 function VideoSection({ section }: { section: Section }) {
   const cfg = parseConfig<{ url: string | null; poster: string | null; title: string; description: string }>(section, { url: null, poster: null, title: "", description: "" })
+  const [playerOpen, setPlayerOpen] = useState(false)
+
+  if (!cfg.url) {
+    return (
+      <section className="px-5 py-14 sm:py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
+          <p className="mt-8 text-muted-foreground">ویدیویی ثبت نشده است.</p>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="px-5 py-14 sm:py-20">
       <div className="mx-auto max-w-3xl">
         {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-        <div className="mt-8">
-          {cfg.url ? (
-            <VideoPlayer src={cfg.url} poster={cfg.poster ?? null} title={cfg.title || section.title} description={cfg.description} />
-          ) : (
-            <p className="text-center text-muted-foreground">ویدیویی ثبت نشده است.</p>
-          )}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
+          className="mt-8"
+        >
+          {/* Instagram-style video preview — vertical card that opens fullscreen player */}
+          <button
+            onClick={() => setPlayerOpen(true)}
+            className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-[9/16] max-h-[70vh] mx-auto block"
+          >
+            {/* video preview (muted, no controls) */}
+            <video
+              src={cfg.url}
+              poster={cfg.poster || undefined}
+              muted
+              playsInline
+              loop
+              autoPlay
+              className="h-full w-full object-cover"
+            />
+            {/* dark overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+            {/* play indicator */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 transition-all group-hover:scale-110 group-hover:bg-white/30">
+                <Play className="h-8 w-8 text-white mr-1" fill="currentColor" />
+              </span>
+            </div>
+            {/* title + description overlay */}
+            <div className="absolute bottom-0 inset-x-0 p-5">
+              {(cfg.title || section.title) && (
+                <h3 className="text-white font-display text-lg mb-1 text-balance">{cfg.title || section.title}</h3>
+              )}
+              {cfg.description && (
+                <p className="text-white/70 text-sm leading-6 line-clamp-2">{cfg.description}</p>
+              )}
+            </div>
+            {/* "tap to play" hint */}
+            <div className="absolute top-3 right-3 rounded-full bg-black/40 backdrop-blur px-3 py-1">
+              <span className="text-white/80 text-[10px]">برای پخش لمس کنید</span>
+            </div>
+          </button>
+        </motion.div>
       </div>
+
+      <AnimatePresence>
+        {playerOpen && (
+          <InstagramPlayer
+            videos={[{ url: cfg.url, title: cfg.title || section.title, description: cfg.description, poster: cfg.poster }]}
+            onClose={() => setPlayerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   )
 }
