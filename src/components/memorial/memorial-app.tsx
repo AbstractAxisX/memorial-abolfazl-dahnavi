@@ -91,6 +91,7 @@ export function MemorialApp() {
           setting={setting}
           blogPosts={data.blogPosts}
           messages={data.messages}
+          media={data.media}
           onNavigate={navigatePage}
           onNavigatePost={navigatePost}
           onMessageAdded={load}

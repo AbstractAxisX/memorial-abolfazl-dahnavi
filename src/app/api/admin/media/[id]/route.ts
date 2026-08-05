@@ -8,11 +8,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const guard = await requireAdmin()
   if (guard) return guard
   const { id } = await params
-  const body = await parseJson<{ title?: string; description?: string; alt?: string }>(req)
+  const body = await parseJson<{ title?: string; description?: string; alt?: string; category?: string }>(req)
   const data: Record<string, unknown> = {}
   if (body?.title !== undefined) data.title = body.title
   if (body?.description !== undefined) data.description = body.description
   if (body?.alt !== undefined) data.alt = body.alt
+  if (body?.category !== undefined) data.category = body.category
   const item = await db.mediaFile.update({ where: { id }, data })
   return json({ item })
 }

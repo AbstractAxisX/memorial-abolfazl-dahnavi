@@ -150,3 +150,36 @@ Stage Summary:
 - Color theme refined (more alive, still appropriate)
 - Gold text now shimmers subtly
 - 0 lint errors, 0 console errors
+
+---
+Task ID: round-6
+Agent: main (z.ai code)
+Task: Fix media→site disconnect, add media categories, rebuild gallery+slider, test EVERYTHING zero-to-hundred
+
+Work Log:
+- ROOT CAUSE of "images not showing on site": gallery/slider sections only read from config.items (manual), NOT from media library. Uploaded files existed in DB but were never displayed. Fixed by:
+  1. Added `category` field to MediaFile model
+  2. Added `media` to /api/content response (was missing!)
+  3. Added `source` + `category` to gallery/slider section config
+  4. GallerySection + SliderSection now read from media library when source="media"
+  5. SectionConfigEditor: added source selector (manual/media) + category dropdown for gallery+slider
+- Added media categories: upload with category, category tabs in media library, filter gallery/slider by category
+- Rebuilt MediaLibrary admin: upload bar with category selector, "new category" button, category tabs, filter+search, edit modal with category field, grid with category badges
+- Rebuilt gallery UI: masonry-style grid (varying row spans), 2-4 cols responsive, lazy loading, hover captions, video play overlay, filterable
+- Fixed video section: was not displaying because sections had no url. Set real video URL via API → verified 2 video elements render on biography page
+- QC tested ALL endpoints: content 200, auth 200, fonts 200, media 200, messages 200, upload image 201, upload video 201, guestbook POST 201, blog create 201, blog edit 200, blog delete 200, page create 201, page delete 200, section create 201, section update 200, section delete 200
+- QC tested ALL 6 admin tabs in browser: صفحات، تنظیمات، فونت‌ها، رسانه، بلاگ، پیام‌ها — ZERO toast errors, ZERO console errors
+- QC tested ALL section types via navigation: home(hero), biography(text+video), gallery(media source), timeline, memories(quotes+guestbook), blog — all render without errors
+- Verified gallery shows 13 media files (images + videos) from media library
+- Verified slider renders with arrows + dots
+- Verified video section plays uploaded video
+
+Stage Summary:
+- Media library → site connection FIXED (gallery/slider can use media source)
+- Media categories added (upload with category, filter by category)
+- Gallery rebuilt (masonry, beautiful, mobile-excellent)
+- Slider works with media source
+- Video section works (tested with real video URL)
+- ALL admin forms tested and working
+- ALL API endpoints tested (200/201)
+- 0 lint errors, 0 console errors

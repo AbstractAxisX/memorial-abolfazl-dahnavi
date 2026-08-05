@@ -19,6 +19,7 @@ export async function POST(req: Request) {
 
   const formData = await req.formData()
   const file = formData.get("file")
+  const category = (formData.get("category") as string) || "عمومی"
   if (!(file instanceof File)) {
     return json({ error: "فایلی ارسال نشده است" }, 400)
   }
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
       type: type === "video" ? "video" : "image",
       alt: file.name.replace(/\.[^.]+$/, ""),
       size: file.size,
+      category,
     },
   })
 

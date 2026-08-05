@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { FileText } from "lucide-react"
-import type { Page, SiteSetting, BlogPost, GuestMessage } from "@/lib/store"
+import type { Page, SiteSetting, BlogPost, GuestMessage, MediaFile } from "@/lib/store"
 import { fontFamilyFor } from "@/lib/fonts"
 import { IconEl } from "@/lib/icon-registry"
 import { SectionRenderer } from "./section-renderers"
@@ -16,6 +16,7 @@ export function PageRenderer({
   setting,
   blogPosts,
   messages,
+  media,
   onNavigate,
   onNavigatePost,
   onMessageAdded,
@@ -24,6 +25,7 @@ export function PageRenderer({
   setting: SiteSetting
   blogPosts: BlogPost[]
   messages: GuestMessage[]
+  media: MediaFile[]
   onNavigate: (slug: string) => void
   onNavigatePost: (id: string) => void
   onMessageAdded: () => Promise<void>
@@ -49,6 +51,7 @@ export function PageRenderer({
               setting={setting}
               blogPosts={blogPosts}
               messages={messages}
+              media={media}
               onNavigate={onNavigate}
               onNavigatePost={onNavigatePost}
               onMessageAdded={onMessageAdded}

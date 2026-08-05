@@ -76,6 +76,7 @@ model MediaFile {
   title       String?
   description String?
   alt         String?
+  category    String   @default("عمومی") // folder/category name
   width       Int?
   height      Int?
   size        Int?

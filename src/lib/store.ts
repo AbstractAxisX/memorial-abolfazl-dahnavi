@@ -53,6 +53,7 @@ export type MediaFile = {
   title: string | null
   description: string | null
   alt: string | null
+  category: string
   width: number | null
   height: number | null
   size: number | null
@@ -95,6 +96,7 @@ export type SiteData = {
   blogPosts: BlogPost[]
   messages: GuestMessage[]
   fonts: FontFile[]
+  media: MediaFile[]
 }
 
 type State = {

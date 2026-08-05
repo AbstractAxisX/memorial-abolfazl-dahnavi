@@ -15,11 +15,13 @@ export function SectionConfigEditor({
   config,
   onChange,
   pages,
+  categories = [],
 }: {
   type: string
   config: Record<string, unknown>
   onChange: (c: Record<string, unknown>) => void
   pages: Page[]
+  categories?: string[]
 }) {
   const c = config as Record<string, unknown>
   const up = (patch: Record<string, unknown>) => onChange({ ...c, ...patch })
@@ -32,9 +34,9 @@ export function SectionConfigEditor({
     case "image":
       return <ImageEditor c={c} up={up} />
     case "gallery":
-      return <ItemsEditor c={c} up={up} withDescription showColumns />
+      return <GalleryEditor c={c} up={up} categories={categories} />
     case "slider":
-      return <SliderEditor c={c} up={up} />
+      return <SliderEditor c={c} up={up} categories={categories} />
     case "video":
       return <VideoEditor c={c} up={up} />
     case "timeline":
@@ -171,10 +173,54 @@ function ItemsEditor({ c, up, withDescription, showColumns }: { c: Record<string
   )
 }
 
-function SliderEditor({ c, up }: { c: Record<string, unknown>; up: (p: Record<string, unknown>) => void }) {
+function GalleryEditor({ c, up, categories = [] }: { c: Record<string, unknown>; up: (p: Record<string, unknown>) => void; categories?: string[] }) {
+  const source = (c.source as string) || "manual"
   return (
     <div className="space-y-3">
-      <ItemsEditor c={c} up={up} />
+      <Field label="منبع محتوا">
+        <Select value={source} onChange={(e) => up({ source: e.target.value })}>
+          <option value="manual">دستی (موارد را خودم اضافه می‌کنم)</option>
+          <option value="media">کتابخانه رسانه (از فایل‌های آپلود شده)</option>
+        </Select>
+      </Field>
+      {source === "media" && (
+        <Field label="دسته (خالی = همه)">
+          <Select value={(c.category as string) || ""} onChange={(e) => up({ category: e.target.value })}>
+            <option value="">همه دسته‌ها</option>
+            {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+          </Select>
+        </Field>
+      )}
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={!!c.filterable} onChange={(e) => up({ filterable: e.target.checked })} className="accent-[oklch(0.39_0.085_168)]" />
+        نمایش دکمه‌های فیلتر (همه/عکس/ویدیو)
+      </label>
+      {source === "manual" && <ItemsEditor c={c} up={up} withDescription />}
+      {source === "media" && (
+        <p className="text-[11px] text-muted-foreground leading-5">فایل‌ها از تب «رسانه» مدیریت می‌شوند. هر فایلی که آپلود کنید، در این گالری نمایش داده می‌شود.</p>
+      )}
+    </div>
+  )
+}
+
+function SliderEditor({ c, up, categories = [] }: { c: Record<string, unknown>; up: (p: Record<string, unknown>) => void; categories?: string[] }) {
+  const source = (c.source as string) || "manual"
+  return (
+    <div className="space-y-3">
+      <Field label="منبع محتوا">
+        <Select value={source} onChange={(e) => up({ source: e.target.value })}>
+          <option value="manual">دستی</option>
+          <option value="media">کتابچه رسانه</option>
+        </Select>
+      </Field>
+      {source === "media" && (
+        <Field label="دسته">
+          <Select value={(c.category as string) || ""} onChange={(e) => up({ category: e.target.value })}>
+            <option value="">همه دسته‌ها</option>
+            {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+          </Select>
+        </Field>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Field label="فاصله اسلاید (میلی‌ثانیه)"><Input type="number" value={String(c.interval ?? 4000)} onChange={(e) => up({ interval: Number(e.target.value) || 4000 })} /></Field>
         <Field label="ارتفاع"><Select value={(c.height as string) || "lg"} onChange={(e) => up({ height: e.target.value })}><option value="sm">کوتاه</option><option value="md">متوسط</option><option value="lg">بلند</option></Select></Field>
@@ -183,10 +229,11 @@ function SliderEditor({ c, up }: { c: Record<string, unknown>; up: (p: Record<st
         <Field label="افکت انتقال"><Select value={(c.transition as string) || "fade"} onChange={(e) => up({ transition: e.target.value })}><option value="fade">محو شدن</option><option value="slide">لغزش</option></Select></Field>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.autoplay} onChange={(e) => up({ autoplay: e.target.checked })} className="accent-[oklch(0.36_0.07_168)]" /> پخش خودکار</label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.arrows} onChange={(e) => up({ arrows: e.target.checked })} className="accent-[oklch(0.36_0.07_168)]" /> فلش‌ها</label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.dots} onChange={(e) => up({ dots: e.target.checked })} className="accent-[oklch(0.36_0.07_168)]" /> نقاط</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.autoplay} onChange={(e) => up({ autoplay: e.target.checked })} className="accent-[oklch(0.39_0.085_168)]" /> پخش خودکار</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.arrows} onChange={(e) => up({ arrows: e.target.checked })} className="accent-[oklch(0.39_0.085_168)]" /> فلش‌ها</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!c.dots} onChange={(e) => up({ dots: e.target.checked })} className="accent-[oklch(0.39_0.085_168)]" /> نقاط</label>
       </div>
+      {source === "manual" && <ItemsEditor c={c} up={up} />}
     </div>
   )
 }

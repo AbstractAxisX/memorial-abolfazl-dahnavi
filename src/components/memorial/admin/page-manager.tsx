@@ -21,6 +21,7 @@ const NAV_ICONS = ["Home", "BookOpen", "Images", "Clock", "Heart", "Newspaper", 
 export function PageManager({ onChanged, customFonts = [] }: { onChanged: () => Promise<void>; customFonts?: FontFile[] }) {
   const { data } = useMemorial()
   const pages = data?.pages ?? []
+  const mediaCategories = [...new Set((data?.media ?? []).map((m) => m.category || "عمومی"))]
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [addingPage, setAddingPage] = useState(false)
   const [newTitle, setNewTitle] = useState("")
@@ -303,7 +304,7 @@ export function PageManager({ onChanged, customFonts = [] }: { onChanged: () => 
                         </div>
                         <div className="rounded-xl border border-[oklch(0.74_0.135_82/0.15)] bg-ivory/40 p-3">
                           <p className="mb-2 text-xs font-medium text-muted-foreground flex items-center gap-1"><Settings2 className="h-3.5 w-3.5" /> تنظیمات اختصاصی ({sectionTypeLabel(curType)})</p>
-                          <SectionConfigEditor type={curType} config={curConfig} onChange={(cfg) => patch(s.id, { config: cfg })} pages={pages} />
+                          <SectionConfigEditor type={curType} config={curConfig} onChange={(cfg) => patch(s.id, { config: cfg })} pages={pages} categories={mediaCategories} />
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => saveSection(s)} disabled={savingId === s.id} className="inline-flex items-center gap-2 rounded-full bg-[oklch(0.36_0.07_168)] px-4 py-2 text-sm text-ivory disabled:opacity-60">{savingId === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} ذخیره بخش</button>
