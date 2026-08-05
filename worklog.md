@@ -93,3 +93,28 @@ Stage Summary:
 - Custom beautiful video player
 - QR code generator for gravestone
 - Dev server stable (icon-registry fix resolved OOM)
+
+---
+Task ID: round-4
+Agent: main (z.ai code)
+Task: Remove scrollbars, fix mobile nav (more menu), custom TTF font upload, fix broken image upload, fix admin sidebar (sticky), UI modernization
+
+Work Log:
+- HID ALL scrollbars globally (scrollbar-width: none + ::-webkit-scrollbar display none) — scroll still functional
+- Fixed mobile bottom nav: 4 fixed tabs + "بیشتر" button that opens a slide-up sheet showing all remaining pages (grid of icon+label). Blog/news now accessible.
+- Custom TTF font upload system: new FontFile Prisma model, /api/admin/fonts (GET/POST/DELETE) + /api/upload accepts .ttf/.otf → stores in /public/fonts/. FontManager admin tab (upload TTF, set technical name + Persian label, preview, install, list installed, delete). CustomFontInjector component injects @font-face CSS at runtime. FontPicker (settings + per-section) shows custom fonts with "(سفارشی)" tag. NO CDN dependency — fonts stored locally.
+- FIXED broken image/file upload: the /api/upload route.ts file was MISSING (deleted accidentally) causing 404 "Server Action not found". Recreated it with proper FormData handling + MediaFile registration. Verified: image upload 201, font upload 201, both create records.
+- Fixed admin sidebar: was scrolling with content. Now `sm:sticky sm:top-20` so it stays fixed while content scrolls. Verified top:21 after scroll.
+- UI modernization: hero redesigned — larger portrait (h-60/h-72) with layered rotating conic-gradient ring + reverse dashed orbit + soft glow; refined role badge with animated ping dot; date pills with backdrop-blur; gradient CTA buttons with hover lift; animated aurora background (3 moving radial gradients in gold/emerald/crimson). VLM score: 6.5 → 8.5/10.
+- Verified admin→site connection: onChanged callback in all editors triggers useMemorial.load() which refetches /api/content and re-renders. Font install → content API returns new font → FontPicker shows it → applies on next section render.
+- Added Type icon + fonts tab to admin panel TABS.
+
+Stage Summary:
+- All scrollbars hidden globally
+- Mobile nav: 4 tabs + "بیشتر" sheet for all pages (blog accessible)
+- Custom TTF font upload works (no CDN) — FontManager tab
+- Image/video upload fixed and verified working (201)
+- Admin sidebar sticky on desktop
+- Hero modernized (VLM 8.5/10)
+- 6 admin tabs: صفحات، تنظیمات، فونت‌ها، رسانه، بلاگ، پیام‌ها
+- 0 lint errors

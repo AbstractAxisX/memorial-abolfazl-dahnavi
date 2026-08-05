@@ -14,10 +14,11 @@ import { Card, Field, Input, Select, FontPicker } from "./settings-editor"
 import { SectionConfigEditor } from "./section-config-editor"
 import { toPersianDigits } from "../biography-view"
 import { useMemorial } from "@/lib/store"
+import type { FontFile } from "@/lib/store"
 
 const NAV_ICONS = ["Home", "BookOpen", "Images", "Clock", "Heart", "Newspaper", "FileText", "Flame", "Star", "Award", "Sparkles", "Image", "Video", "Quote", "MessageSquareHeart", "TreePine"]
 
-export function PageManager({ onChanged }: { onChanged: () => Promise<void> }) {
+export function PageManager({ onChanged, customFonts = [] }: { onChanged: () => Promise<void>; customFonts?: FontFile[] }) {
   const { data } = useMemorial()
   const pages = data?.pages ?? []
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
@@ -290,7 +291,7 @@ export function PageManager({ onChanged }: { onChanged: () => Promise<void> }) {
                           </Field>
                           <Field label="فونت این بخش">
                             <div className="flex gap-1">
-                              <FontPicker value={(draft.fontKey ?? s.fontKey ?? "") as string} onChange={(v) => patch(s.id, { fontKey: v || null })} />
+                              <FontPicker value={(draft.fontKey ?? s.fontKey ?? "") as string} onChange={(v) => patch(s.id, { fontKey: v || null })} customFonts={customFonts} />
                             </div>
                             {s.fontKey && <button onClick={() => patch(s.id, { fontKey: null })} className="text-[10px] text-muted-foreground hover:underline">استفاده از پیش‌فرض</button>}
                           </Field>

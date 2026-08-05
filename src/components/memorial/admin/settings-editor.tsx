@@ -4,11 +4,12 @@ import { useState } from "react"
 import { Save, Loader2, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import type { SiteSetting } from "@/lib/store"
-import { FONTS, fontFamilyFor } from "@/lib/fonts"
+import { BUILTIN_FONTS, fontFamilyFor, useFonts } from "@/lib/fonts"
+import type { FontFile } from "@/lib/store"
 import { ImageUpload } from "./image-upload"
 import { QrCodeGenerator } from "./qr-code"
 
-export function SettingsEditor({ setting }: { setting: SiteSetting | null }) {
+export function SettingsEditor({ setting, customFonts = [] }: { setting: SiteSetting | null; customFonts?: FontFile[] }) {
   const [form, setForm] = useState<Partial<SiteSetting>>(setting ?? {})
   const [saving, setSaving] = useState(false)
 
@@ -56,10 +57,10 @@ export function SettingsEditor({ setting }: { setting: SiteSetting | null }) {
       <Card title="فونت‌ها" subtitle="فونت کل سایت و تیترها">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="فونت متن (بدنه)">
-            <FontPicker value={form.globalFontKey ?? "vazirmatn"} onChange={(v) => set("globalFontKey", v)} />
+            <FontPicker value={form.globalFontKey ?? "vazirmatn"} onChange={(v) => set("globalFontKey", v)} customFonts={customFonts} />
           </Field>
           <Field label="فونت تیترها و عناوین">
-            <FontPicker value={form.headingFontKey ?? "nastaliq"} onChange={(v) => set("headingFontKey", v)} />
+            <FontPicker value={form.headingFontKey ?? "nastaliq"} onChange={(v) => set("headingFontKey", v)} customFonts={customFonts} />
           </Field>
         </div>
         <div className="rounded-xl border border-[oklch(0.74_0.135_82/0.18)] bg-ivory/50 p-4">
@@ -89,7 +90,8 @@ export function SettingsEditor({ setting }: { setting: SiteSetting | null }) {
   )
 }
 
-export function FontPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function FontPicker({ value, onChange, customFonts = [] }: { value: string; onChange: (v: string) => void; customFonts?: FontFile[] }) {
+  const { fonts } = useFonts(customFonts)
   return (
     <select
       value={value}
@@ -97,8 +99,8 @@ export function FontPicker({ value, onChange }: { value: string; onChange: (v: s
       className="w-full rounded-lg border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-3 py-2 text-sm outline-none focus:border-[oklch(0.74_0.135_82)]"
       style={{ fontFamily: fontFamilyFor(value) }}
     >
-      {FONTS.map((f) => (
-        <option key={f.key} value={f.key} style={{ fontFamily: f.family }}>{f.label}</option>
+      {fonts.map((f) => (
+        <option key={f.key} value={f.key} style={{ fontFamily: f.family }}>{f.label}{f.source === "custom" ? " (سفارشی)" : ""}</option>
       ))}
     </select>
   )

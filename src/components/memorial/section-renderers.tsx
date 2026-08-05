@@ -69,71 +69,86 @@ function HeroSection({ section, setting, onNavigate }: { section: Section; setti
   const cfg = parseConfig<{ ctaButtons?: { label: string; pageSlug: string }[] }>(section, {})
   const hasImage = !!setting.heroImage
   return (
-    <section className="relative min-h-[92svh] flex flex-col items-center justify-center overflow-x-hidden px-5 py-24">
+    <section className="relative min-h-[100svh] flex flex-col items-center justify-center overflow-x-hidden px-5 py-16">
       <DecorativeBg variant="hero" />
+
+      {/* Portrait — larger, with layered glow rings */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.6, y: 20 }}
+        initial={{ opacity: 0, scale: 0.5, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-        className="relative z-10 mb-8"
+        transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        className="relative z-10 mb-6"
       >
-        <div className="absolute inset-0 -m-3 rounded-full animate-ray-rotate opacity-60">
-          <div className="w-full h-full rounded-full border-2 border-dashed border-[oklch(0.74_0.135_82/0.5)]" />
+        {/* outer rotating gradient ring */}
+        <div className="absolute inset-0 -m-4 rounded-full animate-ray-rotate opacity-80">
+          <div className="w-full h-full rounded-full bg-[conic-gradient(from_0deg,oklch(0.74_0.135_82),oklch(0.55_0.13_70),oklch(0.82_0.1_90),oklch(0.36_0.07_168),oklch(0.74_0.135_82))]" />
         </div>
-        <div className="absolute inset-0 -m-1 rounded-full bg-[conic-gradient(from_0deg,oklch(0.74_0.135_82),oklch(0.55_0.13_70),oklch(0.82_0.1_90),oklch(0.74_0.135_82))] opacity-70 blur-[2px]" />
-        <div className="relative h-56 w-56 sm:h-64 sm:w-64 rounded-full overflow-hidden shadow-[0_10px_50px_-8px_oklch(0.36_0.07_168/0.5)] bg-ivory">
+        {/* dashed orbit */}
+        <div className="absolute inset-0 -m-6 rounded-full animate-ray-rotate opacity-40" style={{ animationDirection: "reverse", animationDuration: "40s" }}>
+          <div className="w-full h-full rounded-full border border-dashed border-[oklch(0.74_0.135_82/0.6)]" />
+        </div>
+        {/* soft glow */}
+        <div className="absolute inset-0 -m-2 rounded-full bg-[oklch(0.74_0.135_82/0.3)] blur-2xl animate-glow-pulse" />
+        {/* portrait */}
+        <div className="relative h-60 w-60 sm:h-72 sm:w-72 rounded-full overflow-hidden border-4 border-white shadow-[0_20px_60px_-12px_oklch(0.36_0.07_168/0.6)] bg-ivory">
           {hasImage ? (
             <img src={setting.heroImage!} alt={setting.displayTitle} className="h-full w-full object-cover animate-ken-burns" />
           ) : (
-            <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-[oklch(0.95_0.02_85)] to-[oklch(0.88_0.03_85)]">
-              <img src="/decor/crescent.png" alt="نماد هلال احمر" className="h-24 w-24 object-contain opacity-90" />
-              <span className="mt-2 text-xs text-muted-foreground">عکس را از پنل اضافه کنید</span>
+            <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-[oklch(0.95_0.02_85)] to-[oklch(0.85_0.04_85)]">
+              <img src="/decor/crescent.png" alt="نماد هلال احمر" className="h-28 w-28 object-contain opacity-90" />
+              <span className="mt-3 text-[10px] text-muted-foreground">عکس را از پنل اضافه کنید</span>
             </div>
           )}
         </div>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4, duration: 1 }}
-          className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-28 h-12 rounded-full bg-[radial-gradient(circle,oklch(0.74_0.135_82/0.45),transparent_70%)] blur-md animate-glow-pulse"
-        />
       </motion.div>
 
+      {/* Role badge — refined pill */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7, duration: 0.7 }}
-        className="relative z-10 mb-4 inline-flex items-center gap-2 rounded-full border border-[oklch(0.74_0.135_82/0.35)] bg-[oklch(0.995_0.004_85/0.8)] px-4 py-1.5 backdrop-blur"
+        transition={{ delay: 0.6, duration: 0.6 }}
+        className="relative z-10 mb-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-[oklch(0.92_0.035_82/0.9)] to-[oklch(0.36_0.07_168/0.08)] border border-[oklch(0.74_0.135_82/0.4)] px-4 py-1.5 backdrop-blur"
       >
-        <Heart className="h-3.5 w-3.5 text-[oklch(0.52_0.18_25)]" fill="oklch(0.52 0.18 25)" />
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-[oklch(0.52_0.18_25)] opacity-75 animate-ping" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-[oklch(0.52_0.18_25)]" />
+        </span>
         <span className="text-xs sm:text-sm font-medium text-[oklch(0.36_0.07_168)]">{setting.role || setting.subtitle}</span>
       </motion.div>
 
+      {/* Name — the centerpiece */}
       <motion.h1
-        initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+        initial={{ opacity: 0, y: 20, filter: "blur(12px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ delay: 0.9, duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 font-display text-5xl sm:text-6xl md:text-7xl gold-text text-center leading-[2.4] pb-4 text-balance px-2"
+        transition={{ delay: 0.8, duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 font-display text-5xl sm:text-6xl md:text-7xl gold-text text-center leading-[2.2] pb-2 text-balance px-2"
       >
         {setting.displayTitle}
       </motion.h1>
 
+      {/* Dates — with decorative dividers */}
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.15, duration: 0.7 }}
-        className="relative z-10 mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm sm:text-base text-muted-foreground"
+        transition={{ delay: 1.0, duration: 0.6 }}
+        className="relative z-10 mt-3 flex flex-wrap items-center justify-center gap-3 text-sm sm:text-base"
       >
-        <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-[oklch(0.74_0.135_82)]" />{setting.martyrdomDate}</span>
-        <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[oklch(0.74_0.135_82)]" />{setting.martyrdomPlace}</span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[oklch(0.995_0.004_85/0.7)] border border-[oklch(0.74_0.135_82/0.2)] px-3 py-1 backdrop-blur">
+          <CalendarDays className="h-3.5 w-3.5 text-[oklch(0.36_0.07_168)]" />
+          <span className="text-foreground/80">{setting.martyrdomDate}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[oklch(0.995_0.004_85/0.7)] border border-[oklch(0.74_0.135_82/0.2)] px-3 py-1 backdrop-blur">
+          <MapPin className="h-3.5 w-3.5 text-[oklch(0.36_0.07_168)]" />
+          <span className="text-foreground/80">{setting.martyrdomPlace}</span>
+        </span>
       </motion.div>
 
       {setting.heroIntro && (
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.35, duration: 0.8 }}
-          className="relative z-10 mt-7 max-w-md sm:max-w-xl text-center text-foreground/80 leading-8 text-balance text-[15px] sm:text-base"
+          transition={{ delay: 1.2, duration: 0.8 }}
+          className="relative z-10 mt-6 max-w-md sm:max-w-xl text-center text-foreground/75 leading-8 text-balance text-[14px] sm:text-[15px]"
         >
           {setting.heroIntro}
         </motion.p>
@@ -141,21 +156,21 @@ function HeroSection({ section, setting, onNavigate }: { section: Section; setti
 
       {cfg.ctaButtons && cfg.ctaButtons.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.6, duration: 0.7 }}
-          className="relative z-10 mt-9 flex flex-wrap items-center justify-center gap-3"
+          transition={{ delay: 1.4, duration: 0.7 }}
+          className="relative z-10 mt-7 flex flex-wrap items-center justify-center gap-3"
         >
           {cfg.ctaButtons.map((b, i) => (
             <button
               key={i}
               onClick={() => onNavigate(b.pageSlug)}
               className={i === 0
-                ? "group inline-flex items-center gap-2 rounded-full bg-[oklch(0.36_0.07_168)] px-6 py-3 text-sm font-medium text-ivory shadow-lg shadow-[oklch(0.36_0.07_168/0.3)] transition-all hover:bg-[oklch(0.3_0.07_170)] active:scale-95"
-                : "inline-flex items-center gap-2 rounded-full border border-[oklch(0.74_0.135_82/0.4)] bg-[oklch(0.995_0.004_85/0.6)] px-6 py-3 text-sm font-medium text-[oklch(0.36_0.07_168)] backdrop-blur transition-all hover:bg-[oklch(0.92_0.035_82)] active:scale-95"}
+                ? "group inline-flex items-center gap-2 rounded-full bg-gradient-to-l from-[oklch(0.3_0.07_170)] to-[oklch(0.36_0.07_168)] px-7 py-3 text-sm font-medium text-ivory shadow-[0_10px_30px_-6px_oklch(0.36_0.07_168/0.5)] transition-all hover:shadow-[0_14px_40px_-6px_oklch(0.36_0.07_168/0.6)] hover:-translate-y-0.5 active:scale-95"
+                : "inline-flex items-center gap-2 rounded-full border border-[oklch(0.74_0.135_82/0.45)] bg-[oklch(0.995_0.004_85/0.7)] px-6 py-3 text-sm font-medium text-[oklch(0.36_0.07_168)] backdrop-blur transition-all hover:bg-[oklch(0.92_0.035_82)] hover:-translate-y-0.5 active:scale-95"}
             >
               {b.label}
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
             </button>
           ))}
         </motion.div>

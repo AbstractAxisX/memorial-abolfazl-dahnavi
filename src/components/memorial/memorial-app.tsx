@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Grid3x3, X } from "lucide-react"
 import { useMemorial } from "@/lib/store"
 import { IconEl } from "@/lib/icon-registry"
+import { CustomFontInjector } from "@/lib/fonts"
 import { PageRenderer, PageHeader } from "./page-renderer"
 import { MemorialFooter } from "./footer"
 import { AdminPanel } from "./admin/admin-panel"
@@ -99,6 +100,7 @@ export function MemorialApp() {
 
   return (
     <div className="relative flex min-h-[100svh] flex-col bg-background">
+      <CustomFontInjector fonts={data.fonts} />
       <TopNav pages={navPages} setting={setting} currentSlug={view.kind === "page" ? view.slug : "blog"} onNavigate={navigatePage} />
 
       <main className="flex-1 pb-28 sm:pb-12">
@@ -158,27 +160,87 @@ function TopNav({ pages, setting, currentSlug, onNavigate }: { pages: { slug: st
 }
 
 function BottomNav({ pages, currentSlug, onNavigate }: { pages: { slug: string; title: string; navIcon: string }[]; currentSlug: string; onNavigate: (slug: string) => void }) {
-  // limit to 5 tabs on mobile bottom bar
-  const tabs = pages.slice(0, 5)
+  const [moreOpen, setMoreOpen] = useState(false)
+  // Show first 4 as fixed tabs + a "more" button for the rest
+  const visible = pages.slice(0, 4)
+  const hidden = pages.slice(4)
+  const hasMore = hidden.length > 0
+
   return (
-    <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-2 mb-2 rounded-2xl border border-[oklch(0.74_0.135_82/0.2)] bg-[oklch(0.985_0.006_85/0.92)] backdrop-blur-lg shadow-[0_-4px_24px_-6px_oklch(0.36_0.07_168/0.2)]">
-        <div className="flex items-center justify-around px-1 py-1.5">
-          {tabs.map((p) => {
-            const active = currentSlug === p.slug
-            return (
-              <button key={p.slug} onClick={() => onNavigate(p.slug)} className="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 transition">
+    <>
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-2 mb-2 rounded-2xl border border-[oklch(0.74_0.135_82/0.2)] bg-[oklch(0.985_0.006_85/0.92)] backdrop-blur-xl shadow-[0_-8px_32px_-8px_oklch(0.36_0.07_168/0.25)]">
+          <div className="flex items-center justify-around px-1 py-1.5">
+            {visible.map((p) => {
+              const active = currentSlug === p.slug
+              return (
+                <button key={p.slug} onClick={() => onNavigate(p.slug)} className="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 transition">
+                  <AnimatePresence>
+                    {active && <motion.span layoutId="tab-active" className="absolute inset-0 -z-10 rounded-xl bg-[oklch(0.92_0.035_82)]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
+                  </AnimatePresence>
+                  <IconEl name={p.navIcon} className={`h-5 w-5 transition-colors ${active ? "text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`} />
+                  <span className={`text-[10px] transition-colors ${active ? "font-medium text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`}>{p.title}</span>
+                </button>
+              )
+            })}
+            {hasMore && (
+              <button onClick={() => setMoreOpen(true)} className="relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 transition">
                 <AnimatePresence>
-                  {active && <motion.span layoutId="tab-active" className="absolute inset-0 -z-10 rounded-xl bg-[oklch(0.92_0.035_82)]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
+                  {moreOpen && <motion.span layoutId="tab-active" className="absolute inset-0 -z-10 rounded-xl bg-[oklch(0.92_0.035_82)]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
                 </AnimatePresence>
-                <IconEl name={p.navIcon} className={`h-5 w-5 transition-colors ${active ? "text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`} />
-                <span className={`text-[10px] transition-colors ${active ? "font-medium text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`}>{p.title}</span>
+                <Grid3x3 className={`h-5 w-5 transition-colors ${moreOpen ? "text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`} />
+                <span className={`text-[10px] transition-colors ${moreOpen ? "font-medium text-[oklch(0.36_0.07_168)]" : "text-muted-foreground/70"}`}>بیشتر</span>
               </button>
-            )
-          })}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* "More" sheet — slides up from bottom */}
+      <AnimatePresence>
+        {moreOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMoreOpen(false)}
+            className="sm:hidden fixed inset-0 z-50 bg-[oklch(0.12_0.02_165/0.5)] backdrop-blur-sm flex items-end"
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full rounded-t-3xl bg-background border-t-2 border-[oklch(0.74_0.135_82/0.3)] p-5 pb-8"
+            >
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-[oklch(0.74_0.135_82/0.3)]" />
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-display text-lg emerald-text">همه صفحات</h3>
+                <button onClick={() => setMoreOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[oklch(0.95_0.018_82)]"><X className="h-5 w-5 text-muted-foreground" /></button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {hidden.map((p) => {
+                  const active = currentSlug === p.slug
+                  return (
+                    <button
+                      key={p.slug}
+                      onClick={() => { onNavigate(p.slug); setMoreOpen(false) }}
+                      className={`flex flex-col items-center gap-2 rounded-2xl border p-4 transition ${active ? "border-[oklch(0.74_0.135_82)] bg-[oklch(0.92_0.035_82)]" : "border-[oklch(0.74_0.135_82/0.2)] bg-ivory hover:bg-[oklch(0.95_0.018_82)]"}`}
+                    >
+                      <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${active ? "bg-[oklch(0.36_0.07_168)] text-ivory" : "bg-[oklch(0.92_0.035_82)] text-[oklch(0.36_0.07_168)]"}`}>
+                        <IconEl name={p.navIcon} className="h-5 w-5" />
+                      </span>
+                      <span className={`text-xs ${active ? "font-medium text-[oklch(0.36_0.07_168)]" : "text-foreground/80"}`}>{p.title}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 

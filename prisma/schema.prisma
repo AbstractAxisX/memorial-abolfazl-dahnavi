@@ -83,6 +83,16 @@ model MediaFile {
   updatedAt   DateTime @updatedAt
 }
 
+/// Custom uploaded fonts (TTF/OTF) — injected as @font-face at runtime.
+model FontFile {
+  id        String   @id @default(cuid())
+  name      String   @unique // font-family identifier, e.g. "MyNastaliq"
+  label     String   // display label, e.g. "نستعلیق اختصاصی"
+  url       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 /// Blog/news posts (memorial events, charity acts in his name, tributes, ...)
 model BlogPost {
   id          String   @id @default(cuid())

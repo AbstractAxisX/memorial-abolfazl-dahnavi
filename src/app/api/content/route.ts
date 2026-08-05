@@ -3,9 +3,9 @@ import { json } from "@/lib/api"
 
 export const dynamic = "force-dynamic"
 
-// GET the full site tree: settings + pages (with sections) + blog posts + guest messages
+// GET the full site tree: settings + pages (with sections) + blog posts + guest messages + custom fonts
 export async function GET() {
-  const [setting, pages, blogPosts, messages] = await Promise.all([
+  const [setting, pages, blogPosts, messages, fonts] = await Promise.all([
     db.siteSetting.findUnique({ where: { id: "main" } }),
     db.page.findMany({
       orderBy: { order: "asc" },
@@ -17,6 +17,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
+    db.fontFile.findMany(),
   ])
 
   return json({
@@ -24,5 +25,6 @@ export async function GET() {
     pages,
     blogPosts,
     messages,
+    fonts,
   })
 }

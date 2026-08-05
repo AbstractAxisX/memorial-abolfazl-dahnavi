@@ -81,11 +81,20 @@ export type GuestMessage = {
   createdAt: string
 }
 
+export type FontFile = {
+  id: string
+  name: string
+  label: string
+  url: string
+  createdAt: string
+}
+
 export type SiteData = {
   setting: SiteSetting | null
   pages: Page[]
   blogPosts: BlogPost[]
   messages: GuestMessage[]
+  fonts: FontFile[]
 }
 
 type State = {

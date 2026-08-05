@@ -1,40 +1,83 @@
-// Font registry — all Persian fonts available in the site.
-// Google Fonts are loaded via next/font in layout.tsx (variables below).
-// fontcdn.ir fonts are loaded via <link> in layout.tsx.
+"use client"
 
+import { useEffect, useMemo } from "react"
+import type { FontFile } from "./store"
+
+// Built-in font registry — fonts loaded via next/font (Vazirmatn, Nastaliq)
+// or Google CDN <link> (Gulzar, Lalezar, Markazi) or fontcdn.ir (Shabnam, Sahel, Samim, Gandom).
 export type FontDef = {
   key: string
   label: string
   family: string
-  source: "google" | "cdn"
-  /** CSS variable name set by next/font (google only) */
-  variable?: string
-  /** For headings? */
+  source: "builtin" | "custom"
   kind: "body" | "display" | "both"
 }
 
-export const FONTS: FontDef[] = [
-  { key: "vazirmatn", label: "وزیرمتن", family: "var(--font-vazirmatn), Vazirmatn, sans-serif", source: "google", variable: "--font-vazirmatn", kind: "both" },
-  { key: "nastaliq", label: "نستعلیق (نوتو)", family: "var(--font-nastaliq), 'Noto Nastaliq Urdu', serif", source: "google", variable: "--font-nastaliq", kind: "display" },
-  { key: "gulzar", label: "گلزار (نستعلیق)", family: "Gulzar, 'Noto Nastaliq Urdu', serif", source: "cdn", kind: "display" },
-  { key: "lalezar", label: "لاله‌زار", family: "Lalezar, sans-serif", source: "cdn", kind: "display" },
-  { key: "markazi", label: "مرکزی", family: "'Markazi Text', serif", source: "cdn", kind: "both" },
-  { key: "shabnam", label: "شبنم", family: "Shabnam, sans-serif", source: "cdn", kind: "both" },
-  { key: "sahel", label: "ساحل", family: "Sahel, sans-serif", source: "cdn", kind: "both" },
-  { key: "samim", label: "صمیم", family: "Samim, sans-serif", source: "cdn", kind: "both" },
-  { key: "gandom", label: "گندم", family: "Gandom, sans-serif", source: "cdn", kind: "display" },
+export const BUILTIN_FONTS: FontDef[] = [
+  { key: "vazirmatn", label: "وزیرمتن", family: "var(--font-vazirmatn), Vazirmatn, sans-serif", source: "builtin", kind: "both" },
+  { key: "nastaliq", label: "نستعلیق (نوتو)", family: "var(--font-nastaliq), 'Noto Nastaliq Urdu', serif", source: "builtin", kind: "display" },
+  { key: "gulzar", label: "گلزار (نستعلیق)", family: "Gulzar, 'Noto Nastaliq Urdu', serif", source: "builtin", kind: "display" },
+  { key: "lalezar", label: "لاله‌زار", family: "Lalezar, sans-serif", source: "builtin", kind: "display" },
+  { key: "markazi", label: "مرکزی", family: "'Markazi Text', serif", source: "builtin", kind: "both" },
+  { key: "shabnam", label: "شبنم", family: "Shabnam, sans-serif", source: "builtin", kind: "both" },
+  { key: "sahel", label: "ساحل", family: "Sahel, sans-serif", source: "builtin", kind: "both" },
+  { key: "samim", label: "صمیم", family: "Samim, sans-serif", source: "builtin", kind: "both" },
+  { key: "gandom", label: "گندم", family: "Gandom, sans-serif", source: "builtin", kind: "display" },
 ]
 
-export const FONT_MAP: Record<string, FontDef> = Object.fromEntries(
-  FONTS.map((f) => [f.key, f])
-)
+// Hook that returns the full font list (builtin + custom) for a given set of custom fonts.
+export function useFonts(customFonts: FontFile[]): { fonts: FontDef[]; map: Record<string, FontDef> } {
+  const fonts = useMemo(() => {
+    const custom: FontDef[] = customFonts.map((f) => ({
+      key: `custom:${f.name}`,
+      label: f.label,
+      family: `'${f.name}', sans-serif`,
+      source: "custom",
+      kind: "both",
+    }))
+    return [...custom, ...BUILTIN_FONTS]
+  }, [customFonts])
+
+  const map = useMemo(() => Object.fromEntries(fonts.map((f) => [f.key, f])), [fonts])
+  return { fonts, map }
+}
 
 export function fontFamilyFor(key: string | null | undefined, fallback = "var(--font-vazirmatn), sans-serif"): string {
-  if (key && FONT_MAP[key]) return FONT_MAP[key].family
-  return fallback
+  if (!key) return fallback
+  if (key.startsWith("custom:")) {
+    const name = key.slice("custom:".length)
+    return `'${name}', ${fallback}`
+  }
+  const builtin = BUILTIN_FONTS.find((f) => f.key === key)
+  return builtin?.family ?? fallback
 }
 
 export function fontLabel(key: string | null | undefined): string {
-  if (key && FONT_MAP[key]) return FONT_MAP[key].label
-  return "پیش‌فرض"
+  if (!key) return "پیش‌فرض"
+  if (key.startsWith("custom:")) return key.slice("custom:".length)
+  return BUILTIN_FONTS.find((f) => f.key === key)?.label ?? key
+}
+
+// Component that injects @font-face CSS for all custom fonts.
+// Render once at the app root.
+export function CustomFontInjector({ fonts }: { fonts: FontFile[] }) {
+  useEffect(() => {
+    const id = "custom-fonts-style"
+    let el = document.getElementById(id) as HTMLStyleElement | null
+    if (!el) {
+      el = document.createElement("style")
+      el.id = id
+      document.head.appendChild(el)
+    }
+    if (fonts.length === 0) {
+      el.textContent = ""
+      return
+    }
+    el.textContent = fonts
+      .map(
+        (f) => `@font-face { font-family: '${f.name}'; src: url('${f.url}') format('truetype'); font-display: swap; }`
+      )
+      .join("\n")
+  }, [fonts])
+  return null
 }

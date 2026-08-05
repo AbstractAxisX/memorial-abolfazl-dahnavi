@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { X, LogOut, Loader2, Lock, Settings, Files, Image as ImageIcon, Newspaper, MessageSquareHeart, Eye } from "lucide-react"
+import { X, LogOut, Loader2, Lock, Settings, Files, Image as ImageIcon, Newspaper, MessageSquareHeart, Eye, Type } from "lucide-react"
 import { useAuth, useMemorial } from "@/lib/store"
 import { toast } from "sonner"
 import { SettingsEditor } from "./settings-editor"
@@ -10,12 +10,14 @@ import { PageManager } from "./page-manager"
 import { MediaLibrary } from "./media-library"
 import { BlogAdmin } from "./blog-admin"
 import { MessagesEditor } from "./messages-editor"
+import { FontManager } from "./font-manager"
 
-type Tab = "settings" | "pages" | "media" | "blog" | "messages"
+type Tab = "pages" | "settings" | "fonts" | "media" | "blog" | "messages"
 
 const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "pages", label: "صفحات", icon: Files },
   { key: "settings", label: "تنظیمات", icon: Settings },
+  { key: "fonts", label: "فونت‌ها", icon: Type },
   { key: "media", label: "رسانه", icon: ImageIcon },
   { key: "blog", label: "بلاگ", icon: Newspaper },
   { key: "messages", label: "پیام‌ها", icon: MessageSquareHeart },
@@ -68,26 +70,28 @@ export function AdminPanel({ onClose, onChanged }: { onClose: () => void; onChan
         ) : !isAdmin ? (
           <LoginScreen password={password} setPassword={setPassword} onSubmit={doLogin} />
         ) : (
-          <div className="flex flex-col gap-5 sm:flex-row sm:gap-8">
-            <nav className="sm:w-48 sm:shrink-0">
-              <div className="flex gap-1 overflow-x-auto no-scrollbar sm:flex-col sm:gap-1">
+          <div className="flex flex-col gap-5 sm:flex-row sm:gap-8 sm:items-start">
+            {/* Sticky sidebar on desktop, horizontal scroll on mobile */}
+            <nav className="sm:w-48 sm:shrink-0 sm:sticky sm:top-20 z-30">
+              <div className="flex gap-1 overflow-x-auto sm:flex-col sm:gap-1 sm:overflow-visible sm:max-h-[calc(100svh-7rem)]">
                 {TABS.map((t) => {
                   const Icon = t.icon
                   const active = tab === t.key
                   return (
-                    <button key={t.key} onClick={() => setTab(t.key)} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${active ? "bg-[oklch(0.36_0.07_168)] text-ivory shadow-md shadow-[oklch(0.36_0.07_168/0.25)]" : "text-muted-foreground hover:bg-[oklch(0.95_0.018_82)] hover:text-[oklch(0.36_0.07_168)]"}`}>
-                      <Icon className="h-4 w-4" /> {t.label}
+                    <button key={t.key} onClick={() => setTab(t.key)} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition ${active ? "bg-[oklch(0.36_0.07_168)] text-ivory shadow-md shadow-[oklch(0.36_0.07_168/0.25)]" : "text-muted-foreground hover:bg-[oklch(0.95_0.018_82)] hover:text-[oklch(0.36_0.07_168)]"}`}>
+                      <Icon className="h-4 w-4 shrink-0" /> <span className="whitespace-nowrap">{t.label}</span>
                     </button>
                   )
                 })}
               </div>
             </nav>
             <div className="min-w-0 flex-1">
-              {tab === "settings" && <SettingsEditor setting={data?.setting ?? null} />}
-              {tab === "pages" && <PageManager onChanged={onChanged} />}
+              {tab === "settings" && <SettingsEditor setting={data?.setting ?? null} customFonts={data?.fonts ?? []} />}
+              {tab === "pages" && <PageManager onChanged={onChanged} customFonts={data?.fonts ?? []} />}
               {tab === "media" && <MediaLibrary onChanged={onChanged} />}
               {tab === "blog" && <BlogAdmin posts={data?.blogPosts ?? []} onChanged={onChanged} />}
               {tab === "messages" && <MessagesEditor onChanged={onChanged} />}
+              {tab === "fonts" && <FontManager onChanged={onChanged} />}
             </div>
           </div>
         )}
