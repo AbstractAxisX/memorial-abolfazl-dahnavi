@@ -1,0 +1,83 @@
+// Prisma schema for the memorial site of شهید ابوالفضل دهنوی
+// learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Global site settings (single row, id="main")
+model SiteSetting {
+  id              String   @id @default("main")
+  fullName        String   @default("ابوالفضل دهنوی")
+  displayTitle    String   @default("شهید ابوالفضل دهنوی")
+  subtitle        String   @default("امدادگر یکم جمعیت هلال احمر")
+  birthDate       String?
+  martyrdomDate   String   @default("۱۵ فروردین ۱۴۰۵")
+  martyrdomPlace   String   @default("شهرستان مبارکه، اصفهان")
+  role            String   @default("امدادگر یکم جمعیت هلال احمر")
+  heroImage       String?
+  heroIntro       String?
+  publicUrl       String?
+  adminPassword   String   @default("abolfazl1405")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// Ordered biography sections (title + rich content + optional image)
+model BioSection {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  image     String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Gallery items — photos and videos
+model GalleryItem {
+  id        String   @id @default(cuid())
+  type      String   @default("photo") // "photo" | "video"
+  url       String
+  thumb     String?
+  caption   String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Timeline events of the life
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  date        String
+  title       String
+  description String?
+  icon        String   @default("Sparkles")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Quotes / words about or from the martyr
+model Quote {
+  id        String   @id @default(cuid())
+  text      String
+  author    String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Guestbook messages left by visitors
+model GuestMessage {
+  id        String   @id @default(cuid())
+  name      String
+  text      String
+  approved  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
