@@ -13,15 +13,16 @@ function fullDate(iso: string) {
 export function MessagesEditor({ onChanged }: { onChanged: () => Promise<void> }) {
   const [items, setItems] = useState<GuestMessage[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const load = async () => {
-    setLoading(true)
+    setLoading(true); setError(null)
     try {
       const res = await fetch("/api/admin/messages", { cache: "no-store" })
       if (!res.ok) throw new Error()
       const data = (await res.json()) as { items: GuestMessage[] }
       setItems(data.items)
-    } catch { toast.error("بارگذاری ناموفق") }
+    } catch { setError("بارگذاری ناموفق") }
     finally { setLoading(false) }
   }
 
@@ -41,6 +42,12 @@ export function MessagesEditor({ onChanged }: { onChanged: () => Promise<void> }
   }
 
   if (loading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-[oklch(0.74_0.135_82)]" /></div>
+  if (error) return (
+    <div className="rounded-2xl border border-[oklch(0.52_0.18_25/0.25)] bg-[oklch(0.52_0.18_25/0.05)] p-8 text-center">
+      <p className="text-sm text-muted-foreground mb-3">{error}</p>
+      <button onClick={load} className="rounded-full bg-[oklch(0.36_0.07_168)] px-4 py-2 text-sm text-ivory">تلاش دوباره</button>
+    </div>
+  )
 
   return (
     <div className="space-y-3">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Upload, Trash2, Loader2, Type, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
@@ -14,22 +14,23 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
   const [saving, setSaving] = useState(false)
   const [fonts, setFonts] = useState<{ id: string; name: string; label: string; url: string }[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const load = async () => {
+    setError(null)
     try {
       const res = await fetch("/api/admin/fonts", { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        setFonts(data.items)
-      }
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setFonts(data.items)
     } catch {
-      // ignore
+      setError("بارگذاری ناموفق")
     }
     setLoaded(true)
   }
 
-  if (!loaded) load()
+  useEffect(() => { load() }, [])
 
   const upload = async (file: File) => {
     setUploading(true)
@@ -154,6 +155,14 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
 
       <div>
         <h3 className="mb-3 font-display text-lg emerald-text">فونت‌های نصب‌شده ({fonts.length})</h3>
+        {!loaded ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-[oklch(0.74_0.135_82)]" /></div>
+        ) : error ? (
+          <div className="rounded-2xl border border-[oklch(0.52_0.18_25/0.25)] bg-[oklch(0.52_0.18_25/0.05)] p-8 text-center">
+            <p className="text-sm text-muted-foreground mb-3">{error}</p>
+            <button onClick={load} className="rounded-full bg-[oklch(0.36_0.07_168)] px-4 py-2 text-sm text-ivory">تلاش دوباره</button>
+          </div>
+        ) : (
         <div className="space-y-2">
           <AnimatePresence>
             {fonts.map((f) => (
@@ -179,6 +188,7 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
             <p className="rounded-2xl border border-dashed border-[oklch(0.74_0.135_82/0.25)] py-10 text-center text-sm text-muted-foreground">هنوز فونت سفارشی نصب نشده است.</p>
           )}
         </div>
+        )}
       </div>
     </div>
   )

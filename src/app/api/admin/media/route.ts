@@ -2,6 +2,14 @@ import { db } from "@/lib/db"
 import { json, parseJson } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 
+// GET all media files (admin only)
+export async function GET() {
+  const guard = await requireAdmin()
+  if (guard) return guard
+  const items = await db.mediaFile.findMany({ orderBy: { createdAt: "desc" } })
+  return json({ items })
+}
+
 // Register an uploaded file into the media library (with editable metadata)
 export async function POST(req: Request) {
   const guard = await requireAdmin()

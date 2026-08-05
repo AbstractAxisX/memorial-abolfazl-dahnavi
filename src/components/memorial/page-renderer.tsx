@@ -38,9 +38,10 @@ export function PageRenderer({
         return (
           <motion.div
             key={section.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: Math.min(i * 0.04, 0.3) }}
+            initial={{ opacity: 0, y: 40, filter: "blur(6px)" }}
+            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8, delay: Math.min(i * 0.03, 0.2), ease: [0.22, 1, 0.36, 1] }}
             style={{ fontFamily: fam }}
           >
             <SectionRenderer
