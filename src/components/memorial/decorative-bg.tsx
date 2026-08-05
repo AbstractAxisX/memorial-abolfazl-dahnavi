@@ -23,7 +23,7 @@ export function DecorativeBg({
   )
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+    <div className="pointer-events-none absolute inset-0 overflow-x-hidden" aria-hidden>
       {/* soft radial gradients */}
       <div className="absolute -top-1/3 left-1/2 -translate-x-1/2 w-[120vw] h-[60vh] rounded-full bg-[radial-gradient(circle,oklch(0.74_0.135_82/0.10),transparent_60%)] blur-2xl" />
       <div className="absolute bottom-0 right-0 w-[60vw] h-[50vh] rounded-full bg-[radial-gradient(circle,oklch(0.36_0.07_168/0.06),transparent_60%)] blur-2xl" />

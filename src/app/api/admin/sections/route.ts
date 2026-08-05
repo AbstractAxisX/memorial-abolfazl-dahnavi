@@ -2,27 +2,24 @@ import { db } from "@/lib/db"
 import { json, parseJson } from "@/lib/api"
 import { requireAdmin } from "@/lib/auth"
 
-export async function GET() {
-  const guard = await requireAdmin()
-  if (guard) return guard
-  const items = await db.bioSection.findMany({ orderBy: { order: "asc" } })
-  return json({ items })
-}
-
 export async function POST(req: Request) {
   const guard = await requireAdmin()
   if (guard) return guard
-  const body = await parseJson<{ title?: string; content?: string; image?: string | null; order?: number }>(req)
-  const title = (body?.title ?? "").trim()
-  const content = (body?.content ?? "").trim()
-  if (!title) return json({ error: "عنوان الزامی است" }, 400)
-  const maxOrder = await db.bioSection.count()
-  const item = await db.bioSection.create({
+  const body = await parseJson<{ pageId?: string; type?: string; title?: string; subtitle?: string; config?: Record<string, unknown>; fontKey?: string | null; background?: string }>(req)
+  const pageId = (body?.pageId ?? "").trim()
+  const type = (body?.type ?? "text").trim()
+  if (!pageId) return json({ error: "صفحه مقصد الزامی است" }, 400)
+  const maxOrder = await db.section.count({ where: { pageId } })
+  const item = await db.section.create({
     data: {
-      title,
-      content,
-      image: body?.image ?? null,
-      order: body?.order ?? maxOrder,
+      pageId,
+      type,
+      title: body?.title ?? null,
+      subtitle: body?.subtitle ?? null,
+      config: JSON.stringify(body?.config ?? {}),
+      fontKey: body?.fontKey ?? null,
+      background: body?.background ?? "default",
+      order: maxOrder,
     },
   })
   return json({ item }, 201)

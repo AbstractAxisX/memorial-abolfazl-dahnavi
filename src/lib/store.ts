@@ -15,39 +15,62 @@ export type SiteSetting = {
   heroIntro: string | null
   publicUrl: string | null
   adminPassword: string
+  globalFontKey: string
+  headingFontKey: string
+  accent: string
 }
 
-export type BioSection = {
+export type Section = {
   id: string
-  title: string
-  content: string
-  image: string | null
-  order: number
-}
-
-export type GalleryItem = {
-  id: string
+  pageId: string
   type: string
-  url: string
-  thumb: string | null
-  caption: string | null
+  title: string | null
+  subtitle: string | null
+  config: string // JSON
+  fontKey: string | null
+  background: string
   order: number
+  visible: boolean
 }
 
-export type TimelineEvent = {
+export type Page = {
   id: string
-  date: string
+  slug: string
   title: string
-  description: string | null
-  icon: string
+  subtitle: string | null
+  showInNav: boolean
+  navIcon: string
+  isHome: boolean
   order: number
+  sections: Section[]
 }
 
-export type Quote = {
+export type MediaFile = {
   id: string
-  text: string
-  author: string | null
+  url: string
+  type: string
+  thumb: string | null
+  title: string | null
+  description: string | null
+  alt: string | null
+  width: number | null
+  height: number | null
+  size: number | null
+  createdAt: string
+}
+
+export type BlogPost = {
+  id: string
+  title: string
+  excerpt: string | null
+  content: string
+  coverImage: string | null
+  videoUrl: string | null
+  publishedAt: string | null
+  featured: boolean
+  tags: string | null
   order: number
+  createdAt: string
 }
 
 export type GuestMessage = {
@@ -58,23 +81,21 @@ export type GuestMessage = {
   createdAt: string
 }
 
-export type MemorialData = {
+export type SiteData = {
   setting: SiteSetting | null
-  bioSections: BioSection[]
-  gallery: GalleryItem[]
-  timeline: TimelineEvent[]
-  quotes: Quote[]
+  pages: Page[]
+  blogPosts: BlogPost[]
   messages: GuestMessage[]
 }
 
 type State = {
-  data: MemorialData | null
+  data: SiteData | null
   loading: boolean
   error: string | null
   load: () => Promise<void>
 }
 
-export const useMemorial = create<State>((set, get) => ({
+export const useMemorial = create<State>((set) => ({
   data: null,
   loading: true,
   error: null,
@@ -83,13 +104,22 @@ export const useMemorial = create<State>((set, get) => ({
     try {
       const res = await fetch("/api/content", { cache: "no-store" })
       if (!res.ok) throw new Error("بارگذاری ناموفق")
-      const data = (await res.json()) as MemorialData
+      const data = (await res.json()) as SiteData
       set({ data, loading: false })
     } catch (e) {
       set({ loading: false, error: (e as Error).message })
     }
   },
 }))
+
+// Helper to parse section config JSON safely
+export function parseConfig<T = Record<string, unknown>>(section: Section, fallback: T): T {
+  try {
+    return JSON.parse(section.config) as T
+  } catch {
+    return fallback
+  }
+}
 
 // Admin auth store
 type AuthState = {

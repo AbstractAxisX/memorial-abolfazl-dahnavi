@@ -167,12 +167,22 @@
 /* ===== Persian typography helpers ===== */
 .font-display {
   font-family: var(--font-nastaliq), var(--font-vazirmatn), serif;
-  line-height: 1.7;
+  line-height: 1.9;
   font-weight: 400;
+  /* Nastaliq descenders get clipped — give generous breathing room */
+  padding-bottom: 0.45em;
+  margin-bottom: 0.15em;
+  overflow: visible;
+  display: inline-block;
 }
 
 .text-balance {
   text-wrap: balance;
+}
+
+/* Helper to apply a font family dynamically via inline style or data attribute */
+[data-font] {
+  font-family: attr(data-font font);
 }
 
 /* ===== Decorative ornaments ===== */

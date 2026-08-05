@@ -11,14 +11,12 @@ export async function GET() {
   return json({ messages })
 }
 
-// POST a new guestbook message (public, auto-approved by default but admin can moderate)
+// POST a new guestbook message (public)
 export async function POST(req: Request) {
   const body = await parseJson<{ name?: string; text?: string }>(req)
   const name = (body?.name ?? "").trim().slice(0, 60)
   const text = (body?.text ?? "").trim().slice(0, 800)
   if (!name || !text) return json({ error: "نام و متن پیام الزامی است" }, 400)
-  const msg = await db.guestMessage.create({
-    data: { name, text, approved: true },
-  })
+  const msg = await db.guestMessage.create({ data: { name, text, approved: true } })
   return json({ message: msg }, 201)
 }

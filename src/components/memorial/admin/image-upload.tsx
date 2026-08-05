@@ -8,7 +8,7 @@ export function ImageUpload({
   value,
   onChange,
   accept = "image/*",
-  label = "تصویر",
+  label,
   aspect = "aspect-video",
 }: {
   value: string | null
@@ -44,9 +44,7 @@ export function ImageUpload({
 
   return (
     <div className="space-y-2">
-      {label && (
-        <label className="text-xs font-medium text-muted-foreground">{label}</label>
-      )}
+      {label && <label className="text-xs font-medium text-muted-foreground">{label}</label>}
       <input
         ref={inputRef}
         type="file"
@@ -62,6 +60,8 @@ export function ImageUpload({
         <div className={`relative ${aspect} w-full overflow-hidden rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory`}>
           {isVideo && value.match(/\.(mp4|webm|mov)$/i) ? (
             <video src={value} className="h-full w-full object-cover" controls />
+          ) : value.match(/\.(mp4|webm|mov)$/i) ? (
+            <video src={value} className="h-full w-full object-cover" muted />
           ) : (
             <img src={value} alt="" className="h-full w-full object-cover" />
           )}
@@ -88,22 +88,14 @@ export function ImageUpload({
             </>
           ) : (
             <>
-              {isVideo ? (
-                <ImageIcon className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" />
-              ) : (
-                <Upload className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" />
-              )}
+              {isVideo ? <ImageIcon className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" /> : <Upload className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" />}
               <span className="text-xs">برای آپلود انتخاب کنید</span>
             </>
           )}
         </button>
       )}
       {value && (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="text-[11px] text-[oklch(0.36_0.07_168)] hover:underline"
-        >
+        <button type="button" onClick={() => inputRef.current?.click()} className="text-[11px] text-[oklch(0.36_0.07_168)] hover:underline">
           جایگزینی فایل
         </button>
       )}

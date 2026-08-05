@@ -59,3 +59,37 @@ Stage Summary:
 - Admin password: abolfazl1405 (changeable in settings)
 - All content manageable from admin panel: text of every section, images between sections, gallery photos/videos, timeline, quotes, guestbook moderation, QR generation
 - Single / route (admin accessed via footer "مدیریت" button or ?admin=1 / #admin)
+
+---
+Task ID: 6-12
+Agent: main (z.ai code)
+Task: Rebuild as full page-builder CMS: pages, sections (typed/configurable), font system, media library, blog, custom video player
+
+Work Log:
+- Redesigned Prisma schema: Page, Section (type+config JSON+fontKey+background), MediaFile, BlogPost, SiteSetting (+globalFontKey, +headingFontKey, +accent)
+- Migration seed: 6 default pages (Home, Biography, Gallery, Timeline, Memories, Blog) with typed sections + 2 blog posts + guestbook messages
+- Fonts system: 9 Persian fonts (Vazirmatn, Nastaliq, Gulzar, Lalezar, Markazi, Shabnam, Sahel, Samim, Gandom) via next/font + Google CDN + fontcdn.ir; registry with per-section + global font switching
+- Fixed Nastaliq clipping: increased line-height + padding-bottom on .font-display + .font-nastaliq + .font-gulzar; changed hero section overflow to overflow-x-hidden
+- Built icon-registry.ts (curated ~70 icons, NOT import * as Icons) to fix dev-server OOM (was 2.6GB with namespace imports, now stable)
+- APIs: content (full site tree), pages CRUD+reorder, sections CRUD+reorder, media CRUD, blog CRUD, upload (creates MediaFile), guestbook, auth, messages
+- Section type system (12 types): hero, text, image, gallery, slider (autoplay/transition/height settings), video, timeline, quotes, guestbook, blogList, cta, divider — each with renderer + config editor
+- SectionConfigEditor: type-specific editors for all 12 types (content, image upload, items arrays, settings)
+- PageManager: add/edit/delete/reorder pages, add sections (type picker grid), edit section (type switching with confirm, font picker, background picker, config editor, visibility toggle, duplicate, reorder, delete)
+- MediaLibrary: grid of all uploads, upload, edit metadata (title/description/alt), delete (file + record), filter by type, search
+- BlogAdmin: create/edit/delete posts (title, excerpt, content, cover image, video URL, tags, featured, publish date), reorder
+- Custom VideoPlayer: play/pause, seek, volume, speed (0.5-2x), fullscreen, keyboard shortcuts, auto-hide controls, poster, buffering spinner, RTL-aware
+- PageRenderer: renders page sections with per-section font (resolved from section.fontKey or setting defaults based on display/body type)
+- MemorialApp: dynamic nav from pages, page view + blog post detail view, sticky footer, mobile bottom tab bar (5 tabs)
+- Verified via agent-browser: hero renders (Nastaliq not clipped — VLM confirmed), all 5 views navigate, admin login works, all 5 admin tabs work (pages/settings/media/blog/messages), font picker shows all 9 fonts, zero console errors
+
+Stage Summary:
+- Site is now a full WordPress-like page-builder CMS
+- Admin password: abolfazl1405
+- All content (pages, sections, text, images, gallery, slider, video, timeline, quotes, blog, guestbook) manageable from admin
+- 12 section types with type switching and per-section config
+- 9 Persian fonts switchable globally and per-section
+- Media library with editable metadata
+- Blog/news system with cover images, video, tags, featured posts
+- Custom beautiful video player
+- QR code generator for gravestone
+- Dev server stable (icon-registry fix resolved OOM)

@@ -1,5 +1,5 @@
 // Prisma schema for the memorial site of شهید ابوالفضل دهنوی
-// learn more: https://pris.ly/d/prisma-schema
+// Full page-builder CMS: Pages → Sections (typed, configurable) + Media library + Blog
 
 generator client {
   provider = "prisma-client-js"
@@ -24,53 +24,79 @@ model SiteSetting {
   heroIntro       String?
   publicUrl       String?
   adminPassword   String   @default("abolfazl1405")
+  /// Global body font key
+  globalFontKey   String   @default("vazirmatn")
+  /// Global heading/display font key
+  headingFontKey  String   @default("nastaliq")
+  /// Theme accent: emerald | royal | crimson | gold
+  accent          String   @default("emerald")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
 
-/// Ordered biography sections (title + rich content + optional image)
-model BioSection {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  image     String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-/// Gallery items — photos and videos
-model GalleryItem {
-  id        String   @id @default(cuid())
-  type      String   @default("photo") // "photo" | "video"
-  url       String
-  thumb     String?
-  caption   String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-/// Timeline events of the life
-model TimelineEvent {
+/// A page of the site (Home, Biography, Gallery, Timeline, Memories, Blog, ...)
+model Page {
   id          String   @id @default(cuid())
-  date        String
+  slug        String   @unique
   title       String
-  description String?
-  icon        String   @default("Sparkles")
+  subtitle    String?
+  showInNav   Boolean  @default(true)
+  navIcon     String   @default("FileText")
+  isHome      Boolean  @default(false)
   order       Int      @default(0)
+  sections    Section[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-/// Quotes / words about or from the martyr
-model Quote {
-  id        String   @id @default(cuid())
-  text      String
-  author    String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+/// A typed, configurable section belonging to a page.
+/// `config` holds a JSON string with type-specific settings.
+model Section {
+  id          String   @id @default(cuid())
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type        String   // hero | text | image | gallery | slider | video | timeline | quotes | guestbook | blogList | divider | cta
+  title       String?
+  subtitle    String?
+  config      String   @default("{}") // JSON
+  fontKey     String?  // optional per-section font override
+  background  String   @default("default") // default | parchment | emerald | gold
+  order       Int      @default(0)
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Media library — every uploaded file gets a record (editable metadata).
+model MediaFile {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  type        String   @default("image") // image | video
+  thumb       String?
+  title       String?
+  description String?
+  alt         String?
+  width       Int?
+  height      Int?
+  size        Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Blog/news posts (memorial events, charity acts in his name, tributes, ...)
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  excerpt     String?
+  content     String
+  coverImage  String?
+  videoUrl    String?
+  publishedAt String?
+  featured    Boolean  @default(false)
+  tags        String?  // comma separated
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /// Guestbook messages left by visitors
