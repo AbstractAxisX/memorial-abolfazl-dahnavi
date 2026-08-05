@@ -205,3 +205,37 @@ Stage Summary:
 - Gallery videos open in Instagram player with swipe navigation
 - Sections added via admin appear on site (verified)
 - 0 lint errors, 0 console errors
+
+---
+Task ID: round-8
+Agent: main (z.ai code)
+Task: Add real sections to home, rebuild exact Instagram Reels player, full QC
+
+Work Log:
+- ROOT CAUSE: home page only had 1 section (hero) — that's why "no sections on home". Added 4 more: video reel, gallery preview, quotes, CTA. Now home has 5 sections.
+- Rebuilt InstagramPlayer as EXACT Reels clone:
+  - Fullscreen vertical video, object-cover (fills screen like Reels)
+  - Segmented progress bars at top (Stories style)
+  - Right sidebar: like (heart, fill animation), comment, share, save (bookmark), more (3 dots) — exactly like Reels
+  - Bottom: author avatar (gradient ring) + username + Follow button + caption + scrolling music bar
+  - Double-tap = like (big heart burst animation, exactly like Instagram)
+  - Single tap = play/pause (with pause icon overlay)
+  - Swipe up/down to navigate between videos
+  - Auto-advance to next video on end
+  - Mute toggle, close button
+  - Keyboard: Space, Arrows, M, Esc
+- VideoSection: vertical 9:16 card → click opens Reels player
+- GallerySection: clicking a video opens Reels player with all gallery videos as a feed
+- QC verified:
+  - Home: 5 sections (hero, video, gallery, quotes, CTA) — all render
+  - Video reel: click → Reels player opens → video plays (paused=false, error=none)
+  - Gallery: 11 media items (4 videos + 7 images), clicking video → Reels player
+  - All pages: biography (11 sections), gallery, timeline, memories, blog — all render
+  - 0 console errors, 0 lint errors
+
+Stage Summary:
+- Home page now has 5 real sections (was 1)
+- Instagram Reels player built (exact clone: heart/comment/share/save sidebar, music bar, double-tap like, segmented progress)
+- Videos play correctly
+- Gallery videos open in Reels player with swipe navigation
+- Full QC passed, 0 errors

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, Heart, Volume2, VolumeX, Pause, Play, Loader2 } from "lucide-react"
+import { X, Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Volume2, VolumeX, Music2, Play } from "lucide-react"
 import { toPersianDigits } from "./biography-view"
 
 export type ReelVideo = {
@@ -10,13 +10,7 @@ export type ReelVideo = {
   title?: string | null
   description?: string | null
   poster?: string | null
-}
-
-function fmtTime(s: number): string {
-  if (!isFinite(s) || s < 0) s = 0
-  const m = Math.floor(s / 60)
-  const sec = Math.floor(s % 60)
-  return `${toPersianDigits(m)}:${toPersianDigits(sec).padStart(2, "۰")}`
+  author?: string | null
 }
 
 export function InstagramPlayer({
@@ -32,85 +26,87 @@ export function InstagramPlayer({
   const [playing, setPlaying] = useState(true)
   const [muted, setMuted] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [current, setCurrent] = useState(0)
   const [buffering, setBuffering] = useState(true)
   const [error, setError] = useState(false)
-  const [showUI, setShowUI] = useState(true)
-  const [liked, setLiked] = useState(false)
-  const [tapEffect, setTapEffect] = useState<"pause" | "like" | null>(null)
+  const [liked, setLiked] = useState<Record<number, boolean>>({})
+  const [saved, setSaved] = useState<Record<number, boolean>>({})
+  const [heartBurst, setHeartBurst] = useState<{ x: number; y: number; id: number } | null>(null)
+  const [showHeart, setShowHeart] = useState(false)
+  const [lastTap, setLastTap] = useState(0)
+  const [showPauseIcon, setShowPauseIcon] = useState(false)
+
   const videoRef = useRef<HTMLVideoElement>(null)
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const touchStartY = useRef<number | null>(null)
+  const touchStartTime = useRef<number>(0)
 
   const video = videos[index]
 
-  const revealUI = useCallback(() => {
-    setShowUI(true)
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => setShowUI(false), 3000)
+  const revealPauseIcon = useCallback(() => {
+    setShowPauseIcon(true)
+    setTimeout(() => setShowPauseIcon(false), 800)
   }, [])
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current
     if (!v) return
-    if (v.paused) {
-      v.play().catch(() => {})
-    } else {
-      v.pause()
-    }
-  }, [])
+    if (v.paused) v.play().catch(() => {})
+    else v.pause()
+    revealPauseIcon()
+  }, [revealPauseIcon])
 
   const toggleMute = useCallback(() => {
     const v = videoRef.current
     if (!v) return
     v.muted = !v.muted
     setMuted(v.muted)
-    revealUI()
-  }, [revealUI])
+  }, [])
 
   const goNext = useCallback(() => {
-    if (index < videos.length - 1) {
-      setIndex((i) => i + 1)
-      setProgress(0); setCurrent(0); setBuffering(true); setError(false); setPlaying(true)
-    }
-  }, [index, videos.length])
+    setIndex((i) => {
+      if (i < videos.length - 1) {
+        setProgress(0); setBuffering(true); setError(false); setPlaying(true)
+        return i + 1
+      }
+      return i
+    })
+  }, [videos.length])
 
   const goPrev = useCallback(() => {
-    if (index > 0) {
-      setIndex((i) => i - 1)
-      setProgress(0); setCurrent(0); setBuffering(true); setError(false); setPlaying(true)
-    }
-  }, [index])
+    setIndex((i) => {
+      if (i > 0) {
+        setProgress(0); setBuffering(true); setError(false); setPlaying(true)
+        return i - 1
+      }
+      return i
+    })
+  }, [])
 
   // keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
-      if (e.key === "ArrowUp") goPrev()
-      if (e.key === "ArrowDown") goNext()
-      if (e.key === " ") { e.preventDefault(); togglePlay() }
-      if (e.key === "m") toggleMute()
-      revealUI()
+      else if (e.key === "ArrowUp" || e.key === "ArrowLeft") goPrev()
+      else if (e.key === "ArrowDown" || e.key === "ArrowRight") goNext()
+      else if (e.key === " ") { e.preventDefault(); togglePlay() }
+      else if (e.key === "m") toggleMute()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [onClose, goNext, goPrev, togglePlay, toggleMute, revealUI])
+  }, [onClose, goNext, goPrev, togglePlay, toggleMute])
 
   // video events
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
-    const onPlay = () => { setPlaying(true); setBuffering(false); revealUI() }
-    const onPause = () => { setPlaying(false); setShowUI(true) }
-    const onTime = () => {
-      setCurrent(v.currentTime)
-      if (v.duration) setProgress(v.currentTime / v.duration)
-    }
-    const onMeta = () => { setDuration(v.duration || 0); setBuffering(false) }
+    const onPlay = () => { setPlaying(true); setBuffering(false) }
+    const onPause = () => setPlaying(false)
+    const onTime = () => { if (v.duration) setProgress(v.currentTime / v.duration) }
+    const onMeta = () => setBuffering(false)
     const onWaiting = () => setBuffering(true)
     const onPlaying = () => setBuffering(false)
     const onError = () => { setError(true); setBuffering(false) }
+    const onEnded = () => goNext()
     const onCanPlay = () => { setBuffering(false); if (playing) v.play().catch(() => {}) }
     v.addEventListener("play", onPlay)
     v.addEventListener("pause", onPause)
@@ -119,6 +115,7 @@ export function InstagramPlayer({
     v.addEventListener("waiting", onWaiting)
     v.addEventListener("playing", onPlaying)
     v.addEventListener("error", onError)
+    v.addEventListener("ended", onEnded)
     v.addEventListener("canplay", onCanPlay)
     return () => {
       v.removeEventListener("play", onPlay)
@@ -128,201 +125,285 @@ export function InstagramPlayer({
       v.removeEventListener("waiting", onWaiting)
       v.removeEventListener("playing", onPlaying)
       v.removeEventListener("error", onError)
+      v.removeEventListener("ended", onEnded)
       v.removeEventListener("canplay", onCanPlay)
     }
-  }, [index, playing, revealUI])
+  }, [index, playing, goNext])
 
-  // lock body scroll
   useEffect(() => {
     document.body.style.overflow = "hidden"
     return () => { document.body.style.overflow = "" }
   }, [])
 
-  const handleTap = () => {
+  // Tap handling: single tap = play/pause, double tap = like
+  const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
     const now = Date.now()
-    if (tapEffect === "pause" && now - (tapEffect as unknown as number) < 300) {
-      // double tap — like
-      setLiked(true)
-      setTapEffect("like")
-      setTimeout(() => setTapEffect(null), 800)
+    const isDouble = now - lastTap < 300
+    setLastTap(now)
+
+    if (isDouble) {
+      // double tap = like
+      setLiked((l) => ({ ...l, [index]: true }))
+      setShowHeart(true)
+      setTimeout(() => setShowHeart(false), 1000)
     } else {
-      // single tap — pause/play after short delay
-      setTapEffect("pause" as unknown as number)
+      // single tap — wait to see if double follows
       setTimeout(() => {
-        if (tapEffect === "pause") {
+        if (Date.now() - lastTap >= 300) {
           togglePlay()
-          setTapEffect(null)
         }
       }, 300)
     }
-    revealUI()
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
+    touchStartTime.current = Date.now()
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return
     const delta = e.changedTouches[0].clientY - touchStartY.current
-    if (delta < -50) goNext()
-    else if (delta > 50) goPrev()
+    const dt = Date.now() - touchStartTime.current
+    if (delta < -40 && dt < 500) goNext()
+    else if (delta > 40 && dt < 500) goPrev()
     touchStartY.current = null
   }
+
+  const isLiked = liked[index]
+  const isSaved = saved[index]
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      className="fixed inset-0 z-[100] bg-black flex items-center justify-center select-none"
+      style={{ touchAction: "pan-y" }}
     >
-      {/* Video */}
-      <video
-        ref={videoRef}
-        src={video.url}
-        poster={video.poster || undefined}
-        playsInline
-        autoPlay
-        loop
-        className="h-full w-full object-contain"
+      {/* Video container — vertical, fills screen */}
+      <div
+        ref={containerRef}
+        className="relative h-full w-full max-w-md mx-auto bg-black overflow-hidden"
         onClick={handleTap}
-      />
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* The video itself */}
+        <video
+          ref={videoRef}
+          src={video.url}
+          poster={video.poster || undefined}
+          playsInline
+          autoPlay
+          loop
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
-      {/* Buffering spinner */}
-      {buffering && !error && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <Loader2 className="h-12 w-12 animate-spin text-white/80" />
-        </div>
-      )}
-
-      {/* Error state */}
-      {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-8">
-          <div className="rounded-2xl bg-white/10 backdrop-blur p-6">
-            <p className="text-white/90 text-sm mb-1">این ویدیو پخش نمی‌شود</p>
-            <p className="text-white/50 text-xs mb-4">فرمت فایل پشتیبانی نمی‌شود یا فایل خراب است. لطفاً فایل MP4 معتبر آپلود کنید.</p>
-            {index < videos.length - 1 && (
-              <button onClick={goNext} className="rounded-full bg-white/20 px-4 py-2 text-sm text-white">ویدیوی بعدی</button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Double-tap heart effect */}
-      <AnimatePresence>
-        {tapEffect === "like" && (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.5, opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <Heart className="h-24 w-24 text-white" fill="oklch(0.52 0.18 25)" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Center play/pause indicator */}
-      <AnimatePresence>
-        {!playing && !buffering && !error && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            onClick={togglePlay}
-            className="absolute inset-0 m-auto h-20 w-20 flex items-center justify-center rounded-full bg-black/40 backdrop-blur pointer-events-auto"
-          >
-            <Play className="h-10 w-10 text-white mr-1" fill="currentColor" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Top progress bars (Instagram-style segmented) */}
-      <div className="absolute top-0 inset-x-0 z-10 p-3 pt-[env(safe-area-inset-top)]" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
-        {/* segmented progress */}
-        <div className="flex gap-1 mb-2">
-          {videos.map((_, i) => (
-            <div key={i} className="flex-1 h-0.5 rounded-full bg-white/30 overflow-hidden">
-              {i === index && (
-                <div
-                  className="h-full bg-white rounded-full transition-all"
-                  style={{ width: `${progress * 100}%` }}
-                />
+        {/* Error state */}
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center bg-black">
+            <div className="rounded-3xl bg-white/10 backdrop-blur-xl p-8 max-w-xs">
+              <p className="text-white text-base font-medium mb-2">این ویدیو پخش نمی‌شود</p>
+              <p className="text-white/50 text-xs mb-5 leading-6">فرمت فایل پشتیبانی نمی‌شود. لطفاً فایل MP4 (H.264) معتبر آپلود کنید.</p>
+              {index < videos.length - 1 && (
+                <button onClick={(e) => { e.stopPropagation(); goNext() }} className="rounded-full bg-white/20 px-5 py-2.5 text-sm text-white">ویدیوی بعدی</button>
               )}
-              {i < index && <div className="h-full w-full bg-white rounded-full" />}
             </div>
-          ))}
-        </div>
-        {/* top bar: close + time */}
+          </div>
+        )}
+
+        {/* Buffering spinner */}
+        {buffering && !error && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="h-10 w-10 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          </div>
+        )}
+
+        {/* Double-tap heart animation */}
         <AnimatePresence>
-          {showUI && (
+          {showHeart && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex items-center justify-between"
+              initial={{ scale: 0, opacity: 0, rotate: -15 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              exit={{ scale: 1.4, opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
             >
-              <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 backdrop-blur text-white">
-                <X className="h-6 w-6" />
-              </button>
-              <span className="text-white/80 text-xs tabular-nums" dir="ltr">
-                {fmtTime(current)} / {fmtTime(duration)}
-              </span>
+              <Heart className="h-28 w-28 text-white" fill="oklch(0.52 0.18 25)" stroke="oklch(0.52 0.18 25)" />
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
-      {/* Bottom overlay: title + description + actions */}
-      <AnimatePresence>
-        {showUI && !error && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-0 inset-x-0 z-10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/70 to-transparent"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {video.title && (
-              <h3 className="text-white font-display text-lg mb-1 text-balance">{video.title}</h3>
-            )}
-            {video.description && (
-              <p className="text-white/70 text-sm leading-6 mb-3 text-balance">{video.description}</p>
-            )}
-            <div className="flex items-center gap-3">
-              <button onClick={togglePlay} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white">
-                {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </button>
-              <button onClick={toggleMute} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white">
-                {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-              </button>
-              <button onClick={() => setLiked((l) => !l)} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur text-white">
-                <Heart className={`h-5 w-5 ${liked ? "text-[oklch(0.52_0.18_25)]" : ""}`} fill={liked ? "oklch(0.52 0.18 25)" : "none"} />
-              </button>
-              <span className="text-white/50 text-xs mr-auto">
-                {toPersianDigits(index + 1)} از {toPersianDigits(videos.length)}
-              </span>
-              {index > 0 && (
-                <button onClick={goPrev} className="text-white/60 text-xs hover:text-white">قبلی</button>
-              )}
-              {index < videos.length - 1 && (
-                <button onClick={goNext} className="text-white/60 text-xs hover:text-white">بعدی</button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Pause icon overlay */}
+        <AnimatePresence>
+          {showPauseIcon && !buffering && !error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            >
+              <div className="rounded-full bg-black/40 backdrop-blur p-6">
+                {playing ? (
+                  <Play className="h-12 w-12 text-white" fill="currentColor" />
+                ) : (
+                  <div className="flex gap-2">
+                    <div className="w-4 h-12 bg-white rounded" />
+                    <div className="w-4 h-12 bg-white rounded" />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Swipe hints (edge arrows) */}
-      {index < videos.length - 1 && showUI && (
-        <div className="absolute bottom-1/2 left-1/2 translate-x-1/2 translate-y-16 text-white/30 text-[10px] pointer-events-none">
-          ↑ برای ویدیوی بعدی ↑
+        {/* Top gradient + close + progress bars */}
+        <div className="absolute top-0 inset-x-0 z-20 pointer-events-none">
+          <div className="h-32 bg-gradient-to-b from-black/50 to-transparent" />
         </div>
-      )}
+        <div className="absolute top-0 inset-x-0 z-30 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pointer-events-auto">
+          {/* Segmented progress bars — Instagram Stories style */}
+          <div className="flex gap-1 mb-3">
+            {videos.map((_, i) => (
+              <div key={i} className="flex-1 h-[3px] rounded-full bg-white/30 overflow-hidden">
+                {i === index && (
+                  <div
+                    className="h-full bg-white rounded-full"
+                    style={{ width: `${progress * 100}%` }}
+                  />
+                )}
+                {i < index && <div className="h-full w-full bg-white rounded-full" />}
+              </div>
+            ))}
+          </div>
+          {/* Top bar */}
+          <div className="flex items-center justify-between">
+            <button onClick={(e) => { e.stopPropagation(); onClose() }} className="flex h-9 w-9 items-center justify-center rounded-full text-white active:scale-90 transition">
+              <X className="h-6 w-6" />
+            </button>
+            <span className="text-white text-sm font-medium">ریلز</span>
+            <button onClick={(e) => { e.stopPropagation(); toggleMute() }} className="flex h-9 w-9 items-center justify-center rounded-full text-white active:scale-90 transition">
+              {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Right sidebar — Instagram actions */}
+        <div className="absolute right-2 bottom-28 z-30 flex flex-col items-center gap-5 pointer-events-auto">
+          {/* Like */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setLiked((l) => ({ ...l, [index]: !l[index] })) }}
+            className="flex flex-col items-center gap-1 active:scale-90 transition"
+          >
+            <div className="flex h-12 w-12 items-center justify-center">
+              <motion.div
+                animate={isLiked ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Heart
+                  className={`h-8 w-8 ${isLiked ? "text-[oklch(0.52_0.18_25)]" : "text-white"}`}
+                  fill={isLiked ? "oklch(0.52 0.18 25)" : "none"}
+                  stroke="white"
+                  strokeWidth={1.5}
+                />
+              </motion.div>
+            </div>
+            <span className="text-white text-[11px] font-medium tabular-nums">{toPersianDigits(isLiked ? 124 : 123)}</span>
+          </button>
+          {/* Comment */}
+          <button onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-1 active:scale-90 transition">
+            <div className="flex h-12 w-12 items-center justify-center">
+              <MessageCircle className="h-8 w-8 text-white" stroke="white" strokeWidth={1.5} />
+            </div>
+            <span className="text-white text-[11px] font-medium">{toPersianDigits(12)}</span>
+          </button>
+          {/* Share */}
+          <button onClick={(e) => e.stopPropagation()} className="flex flex-col items-center gap-1 active:scale-90 transition">
+            <div className="flex h-12 w-12 items-center justify-center">
+              <Send className="h-8 w-8 text-white" stroke="white" strokeWidth={1.5} />
+            </div>
+            <span className="text-white text-[11px] font-medium">ارسال</span>
+          </button>
+          {/* Save */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setSaved((s) => ({ ...s, [index]: !s[index] })) }}
+            className="flex flex-col items-center gap-1 active:scale-90 transition"
+          >
+            <div className="flex h-12 w-12 items-center justify-center">
+              <Bookmark className={`h-8 w-8 ${isSaved ? "text-white" : "text-white"}`} fill={isSaved ? "white" : "none"} stroke="white" strokeWidth={1.5} />
+            </div>
+          </button>
+          {/* More */}
+          <button onClick={(e) => e.stopPropagation()} className="flex h-12 w-12 items-center justify-center active:scale-90 transition">
+            <MoreHorizontal className="h-7 w-7 text-white" />
+          </button>
+        </div>
+
+        {/* Bottom info — caption + author + music */}
+        <div className="absolute bottom-0 inset-x-0 z-20 pointer-events-none">
+          <div className="h-40 bg-gradient-to-t from-black/70 to-transparent" />
+        </div>
+        <div
+          className="absolute bottom-0 right-0 left-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Author row */}
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[oklch(0.52_0.18_25)] via-[oklch(0.74_0.135_82)] to-[oklch(0.36_0.07_168)] p-[2px]">
+              <div className="h-full w-full rounded-full bg-black flex items-center justify-center">
+                <span className="text-white text-xs font-bold">ا</span>
+              </div>
+            </div>
+            <span className="text-white text-sm font-semibold">{video.author || "یادبود شهید"}</span>
+            <button className="rounded-lg border border-white/60 px-3 py-0.5 text-white text-xs font-medium">دنبال کردن</button>
+          </div>
+          {/* Caption */}
+          {(video.title || video.description) && (
+            <p className="text-white text-sm leading-6 mb-2 line-clamp-2">
+              <span className="font-semibold">{video.author || "یادبود"}</span>{" "}
+              {(video.title || video.description || "").slice(0, 100)}
+              {(video.title || video.description || "").length > 100 ? "..." : ""}
+              <span className="text-white/60"> بیشتر</span>
+            </p>
+          )}
+          {/* Music bar */}
+          <div className="flex items-center gap-2 mt-2">
+            <Music2 className="h-3.5 w-3.5 text-white shrink-0" />
+            <div className="overflow-hidden flex-1">
+              <motion.div
+                animate={{ x: [0, -200] }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="whitespace-nowrap text-white text-xs"
+              >
+                یادبود شهید ابوالفضل دهنوی • امدادگر هلال احمر • {video.title || "ریلز یادبود"}
+              </motion.div>
+            </div>
+          </div>
+          {/* Counter */}
+          <div className="mt-2 text-white/60 text-[11px]">
+            {toPersianDigits(index + 1)} از {toPersianDigits(videos.length)}
+          </div>
+        </div>
+
+        {/* Swipe hint arrows (desktop) */}
+        {index < videos.length - 1 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); goNext() }}
+            className="hidden sm:flex absolute bottom-1/2 left-2 z-30 h-10 w-10 items-center justify-center rounded-full bg-black/30 backdrop-blur text-white"
+          >
+            ↓
+          </button>
+        )}
+        {index > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); goPrev() }}
+            className="hidden sm:flex absolute top-1/2 left-2 z-30 h-10 w-10 items-center justify-center rounded-full bg-black/30 backdrop-blur text-white"
+          >
+            ↑
+          </button>
+        )}
+      </div>
     </motion.div>
   )
 }
