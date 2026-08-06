@@ -401,3 +401,26 @@ Stage Summary:
 - iOS Photos folder cards
 - Normal page scroll in category view
 - 0.55vh media height ensures download button always visible
+
+---
+Task ID: round-13
+Agent: main (z.ai code)
+Task: Fix video player (timeline/timer/seek), install custom TTF fonts, test with real video
+
+Work Log:
+- Extracted 17 TTF fonts from user's RAR file (Gandom, Lalezar, MolsaqArabic ExtraBold/Light, Sahel Light/SemiBold/Regular, Samim Bold/Medium/Regular, SGKara Light, Shabnam Medium/Regular, Vazirmatn Bold/Light/Medium/Regular)
+- Copied all fonts to public/fonts/
+- Registered all 17 fonts in database via API (POST /api/admin/fonts)
+- Fonts now appear in font picker with "(سفارشی)" tag
+- Created real 8-second test video with ffmpeg (testsrc + sine, H.264+AAC, faststart)
+- ROOT CAUSE of broken video player: video event listeners (timeupdate, loadedmetadata, play, pause) were set up in a useEffect that ran BEFORE the portal mounted. Since the video element only exists after `mounted` state becomes true and the portal renders, the event listeners were attached to a null ref.
+- FIX: Added `mounted` to the video events useEffect dependency array: `}, [mounted, index, item.type])`
+- Verified: video plays correctly, timeline progress bar updates (59.9% → 100%), timer advances (۰:۰۱ → ۰:۰۳), duration shows correctly
+- Turbopack crash resolved by removing and re-adding gsap package (cleared corrupted internal state)
+- Viewer uses React Portal (createPortal to document.body) — escapes all ancestor transforms, covers navbar/header
+
+Stage Summary:
+- Video player FIXED: timeline, timer, play/pause, seek all work
+- 17 custom TTF fonts installed (from user's RAR file)
+- Viewer uses portal — works on top of all elements (navbar, header, sections)
+- Lazy loading already in place (IntersectionObserver + 200px rootMargin)

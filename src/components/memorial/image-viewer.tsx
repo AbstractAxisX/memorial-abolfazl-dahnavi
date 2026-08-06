@@ -126,7 +126,7 @@ export function ImageViewer({
   }, [index, items.length])
 
   useEffect(() => {
-    if (item.type !== "video") return
+    if (!mounted || item.type !== "video") return
     const v = videoRef.current
     if (!v) return
     const onTime = () => { setCurrent(v.currentTime); if (v.duration) setProgress(v.currentTime / v.duration) }
@@ -143,7 +143,7 @@ export function ImageViewer({
       v.removeEventListener("play", onPlay)
       v.removeEventListener("pause", onPause)
     }
-  }, [index, item.type])
+  }, [mounted, index, item.type])
 
   const togglePlay = () => {
     const v = videoRef.current
