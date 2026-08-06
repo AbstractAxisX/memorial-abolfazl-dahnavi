@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import gsap from "gsap"
 import { Download, Play, Pause } from "lucide-react"
 import { toPersianDigits } from "./biography-view"
@@ -53,6 +54,7 @@ export function ImageViewer({
   onClose: () => void
 }) {
   const [index, setIndex] = useState(startIndex)
+  const [mounted, setMounted] = useState(false)
   const mediaRef = useRef<HTMLDivElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
   const captionRef = useRef<HTMLDivElement>(null)
@@ -65,7 +67,12 @@ export function ImageViewer({
 
   const item = items[index]
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true) }, [])
+
+  // GSAP open animation — runs after portal mounts
   useEffect(() => {
+    if (!mounted) return
     const media = mediaRef.current
     const backdrop = backdropRef.current
     const caption = captionRef.current
@@ -78,7 +85,6 @@ export function ImageViewer({
     const fx = (vw - S) / 2
     const fy = Math.max(70, (vh - S - 130) / 2)
 
-    // Start from the clicked element's position (viewport-relative from getBoundingClientRect)
     gsap.set(media, { top: originRect.top, left: originRect.left, width: originRect.width, height: originRect.height, borderRadius: 14, scale: 1, opacity: 1 })
     gsap.set(backdrop, { opacity: 0 })
     gsap.set(caption, { opacity: 0, y: 10, top: fy + S + 18 })
@@ -93,13 +99,7 @@ export function ImageViewer({
       .to(closeBtn, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 0.22)
 
     return () => { gsap.killTweensOf([media, backdrop, caption, closeBtn]) }
-  }, []) // only on mount
-
-  // When index changes, update media (no animation, just swap)
-  useEffect(() => {
-    if (index === startIndex) return // skip initial
-    // Could add slide animation here if needed
-  }, [index, startIndex])
+  }, [mounted, originRect])
 
   const handleClose = () => {
     const media = mediaRef.current
@@ -115,7 +115,6 @@ export function ImageViewer({
       .to(closeBtn, { opacity: 0, scale: 0.8, duration: 0.2 }, 0)
   }
 
-  // Keyboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose()
@@ -124,10 +123,8 @@ export function ImageViewer({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, items.length])
 
-  // Video events
   useEffect(() => {
     if (item.type !== "video") return
     const v = videoRef.current
@@ -175,15 +172,16 @@ export function ImageViewer({
     } catch { window.open(item.url, "_blank") }
   }
 
-  return (
-    <div className="fixed inset-0 z-[100]" onClick={handleClose}>
-      <div ref={backdropRef} className="absolute inset-0" style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }} />
+  if (!mounted) return null
 
-      <div
-        ref={mediaRef}
-        className="fixed z-10 overflow-hidden bg-black shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+  // Portal to document.body — escapes ALL ancestor transforms/filters
+  // This ensures position:fixed is truly relative to viewport,
+  // and the blur backdrop covers EVERYTHING (navbar, header, sections)
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 99999 }} onClick={handleClose}>
+      <div ref={backdropRef} style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }} />
+
+      <div ref={mediaRef} style={{ position: "fixed", zIndex: 10, overflow: "hidden", backgroundColor: "#000", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)" }} onClick={(e) => e.stopPropagation()}>
         {item.type === "video" ? (
           <div className="flex h-full w-full flex-col">
             <video ref={videoRef} src={item.url} poster={item.thumb || undefined} playsInline onClick={togglePlay} className="flex-1 w-full object-contain" />
@@ -206,7 +204,7 @@ export function ImageViewer({
         )}
       </div>
 
-      <div ref={captionRef} className="fixed z-20 inset-x-0 mx-auto max-w-md px-4" onClick={(e) => e.stopPropagation()}>
+      <div ref={captionRef} style={{ position: "fixed", zIndex: 20, left: 0, right: 0, margin: "0 auto", maxWidth: "28rem", padding: "0 1rem" }} onClick={(e) => e.stopPropagation()}>
         {(item.caption || item.description) && (
           <div className="rounded-xl bg-white/10 backdrop-blur-md border border-white/15 p-3 shadow-lg mb-2">
             {item.caption && <p className="text-sm font-medium text-white text-center mb-0.5">{item.caption}</p>}
@@ -218,13 +216,14 @@ export function ImageViewer({
         </button>
       </div>
 
-      <button ref={closeRef} onClick={(e) => { e.stopPropagation(); handleClose() }} className="fixed top-5 left-5 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 transition" style={{ top: "max(1.25rem, env(safe-area-inset-top))" }} aria-label="بستن">
+      <button ref={closeRef} onClick={(e) => { e.stopPropagation(); handleClose() }} style={{ position: "fixed", top: "max(1.25rem, env(safe-area-inset-top))", left: "1.25rem", zIndex: 20 }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 transition" aria-label="بستن">
         <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M2 2l10 10M12 2 2 12" /></svg>
       </button>
 
-      <div className="fixed top-5 right-5 z-20 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-white text-xs tabular-nums" style={{ top: "max(1.25rem, env(safe-area-inset-top))" }}>
+      <div style={{ position: "fixed", top: "max(1.25rem, env(safe-area-inset-top))", right: "1.25rem", zIndex: 20 }} className="rounded-full bg-white/15 backdrop-blur px-3 py-1 text-white text-xs tabular-nums">
         {toPersianDigits(index + 1)} / {toPersianDigits(items.length)}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
