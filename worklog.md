@@ -263,3 +263,48 @@ Stage Summary:
 - Image slider with glass download button
 - Lazy loading with IntersectionObserver for all gallery items
 - Swipe navigation + small arrow buttons + smooth spring animations
+
+---
+Task ID: round-10
+Agent: main (z.ai code)
+Task: Rebuild gallery from scratch — fix overflow, remove glass buttons, lock body scroll on viewer
+
+Work Log:
+- Deleted old ios-viewer.tsx, gallery-new.tsx, instagram-player.tsx completely
+- Built new image-viewer.tsx from scratch:
+  - Background: rgba(245,242,235,0.85) + blur(16px) — NOT black, warm blurred overlay
+  - Media at natural size (max-h-65vh, object-contain) — NOT fullscreen
+  - Caption in solid white box (NOT glass) with border + shadow
+  - Download button: solid bg-[emerald] (NOT glass)
+  - Close button: solid emerald circle, top-right
+  - Arrows: solid white circles
+  - Body scroll LOCKED when viewer open (document.body.style.overflow = "hidden") — site doesn't move
+  - Drag/swipe only on the media motion.div — not the whole page
+  - Spring slide animation (stiffness 320, damping 32)
+  - Simple video player: timeline bar + play/pause + time display
+- Built new gallery-section.tsx from scratch:
+  - Category grid: square cards with cover image + name + count (no glass)
+  - CategoryView: NORMAL page that scrolls naturally (NOT overflow hidden) — items in normal flow
+  - Items grid: 2-4 cols responsive, lazy loading with IntersectionObserver
+  - Item click opens ImageViewer
+  - Filter tabs (all/photo/video)
+  - Back button
+  - line-clamp-2 for captions
+- Rebuilt VideoSection: simple video card → opens ImageViewer (no Instagram player)
+- QC tested:
+  - Gallery: 5 category cards render
+  - Click category → expanded view, page scrolls naturally (scrollY=387)
+  - Click item → viewer opens, body scroll LOCKED (overflow=hidden)
+  - Site doesn't move when swiping in viewer
+  - Close viewer → body scroll restored (overflow="")
+  - All pages: home (6), biography (2), timeline (2), memories (3), blog — all render
+  - 0 console errors, 0 lint errors
+  - VLM: 8.5/10
+
+Stage Summary:
+- Gallery rebuilt from scratch (no old code)
+- Category view scrolls naturally (no overflow hidden)
+- Viewer: blurred bg (NOT black), natural-size media, solid buttons (NOT glass)
+- Body scroll locked when viewer open — site doesn't move
+- Swipe only works on viewer media, not site
+- Simple video player (timeline + stop)

@@ -14,8 +14,8 @@ import { fontFamilyFor } from "@/lib/fonts"
 import { OrnamentDivider, SectionTitle } from "./ornaments"
 import { DecorativeBg } from "./decorative-bg"
 import { VideoPlayer } from "./video-player"
-import { InstagramPlayer, type ReelVideo } from "./instagram-player"
-import { GallerySection } from "./gallery-new"
+import { ImageViewer } from "./image-viewer"
+import { GallerySection } from "./gallery-section"
 import { toPersianDigits } from "./biography-view"
 import { Lightbox } from "./lightbox"
 
@@ -345,7 +345,7 @@ function useEffectInterval(fn: () => void | (() => void), deps: unknown[]) {
 // ============ VIDEO ============
 function VideoSection({ section }: { section: Section }) {
   const cfg = parseConfig<{ url: string | null; poster: string | null; title: string; description: string }>(section, { url: null, poster: null, title: "", description: "" })
-  const [playerOpen, setPlayerOpen] = useState(false)
+  const [open, setOpen] = useState(false)
 
   if (!cfg.url) {
     return (
@@ -369,51 +369,32 @@ function VideoSection({ section }: { section: Section }) {
           transition={{ duration: 0.6 }}
           className="mt-8"
         >
-          {/* Instagram-style video preview — vertical card that opens fullscreen player */}
           <button
-            onClick={() => setPlayerOpen(true)}
-            className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-[9/16] max-h-[70vh] mx-auto block"
+            onClick={() => setOpen(true)}
+            className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-video mx-auto block"
           >
-            {/* video preview (muted, no controls) */}
-            <video
-              src={cfg.url}
-              poster={cfg.poster || undefined}
-              muted
-              playsInline
-              loop
-              autoPlay
-              className="h-full w-full object-cover"
-            />
-            {/* dark overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-            {/* play indicator */}
+            <video src={cfg.url} poster={cfg.poster || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-md border border-white/30 transition-all group-hover:scale-110 group-hover:bg-white/30">
-                <Play className="h-8 w-8 text-white mr-1" fill="currentColor" />
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[oklch(0.39_0.085_168)] text-white shadow-lg transition group-hover:scale-110">
+                <Play className="h-8 w-8 mr-1" fill="currentColor" />
               </span>
             </div>
-            {/* title + description overlay */}
-            <div className="absolute bottom-0 inset-x-0 p-5">
-              {(cfg.title || section.title) && (
-                <h3 className="text-white font-display text-lg mb-1 text-balance">{cfg.title || section.title}</h3>
-              )}
-              {cfg.description && (
-                <p className="text-white/70 text-sm leading-6 line-clamp-2">{cfg.description}</p>
-              )}
-            </div>
-            {/* "tap to play" hint */}
-            <div className="absolute top-3 right-3 rounded-full bg-black/40 backdrop-blur px-3 py-1">
-              <span className="text-white/80 text-[10px]">برای پخش لمس کنید</span>
-            </div>
+            {(cfg.title || section.title) && (
+              <div className="absolute bottom-0 inset-x-0 p-4">
+                <h3 className="text-white font-display text-base mb-1">{cfg.title || section.title}</h3>
+                {cfg.description && <p className="text-white/70 text-xs line-clamp-2">{cfg.description}</p>}
+              </div>
+            )}
           </button>
         </motion.div>
       </div>
-
       <AnimatePresence>
-        {playerOpen && (
-          <InstagramPlayer
-            videos={[{ url: cfg.url, title: cfg.title || section.title, description: cfg.description, poster: cfg.poster }]}
-            onClose={() => setPlayerOpen(false)}
+        {open && (
+          <ImageViewer
+            items={[{ url: cfg.url, type: "video", caption: cfg.title || section.title, description: cfg.description, thumb: cfg.poster }]}
+            startIndex={0}
+            onClose={() => setOpen(false)}
           />
         )}
       </AnimatePresence>
