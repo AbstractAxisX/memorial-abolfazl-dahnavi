@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, Grid3x3, X } from "lucide-react"
 import { useMemorial } from "@/lib/store"
 import { IconEl } from "@/lib/icon-registry"
-import { CustomFontInjector } from "@/lib/fonts"
+import { CustomFontInjector, fontFamilyFor } from "@/lib/fonts"
 import { PageRenderer, PageHeader } from "./page-renderer"
 import { MemorialFooter } from "./footer"
 import { AdminPanel } from "./admin/admin-panel"
@@ -34,12 +34,57 @@ export function MemorialApp() {
     return () => window.removeEventListener("hashchange", check)
   }, [])
 
+  // URL routing — sync view with URL hash on load
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (!data) return
+    const hash = window.location.hash.replace(/^#/, "")
+    if (hash === "admin" || hash.startsWith("admin")) return
+    if (hash.startsWith("blog/")) {
+      const postId = hash.slice(5)
+      if (data.blogPosts.find((p) => p.id === postId)) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+        setView({ kind: "blog", postId })
+        return
+      }
+    }
+    if (hash && data.pages.find((p) => p.slug === hash)) {
+      setView({ kind: "page", slug: hash })
+    }
+  }, [data])
+
+  // Listen for hash changes (back/forward)
+  useEffect(() => {
+    const onHash = () => {
+      if (!data) return
+      const hash = window.location.hash.replace(/^#/, "")
+      if (hash === "admin" || hash.startsWith("admin")) return
+      if (hash.startsWith("blog/")) {
+        const postId = hash.slice(5)
+        if (data.blogPosts.find((p) => p.id === postId)) {
+          setView({ kind: "blog", postId })
+          return
+        }
+      }
+      if (hash && data.pages.find((p) => p.slug === hash)) {
+        setView({ kind: "page", slug: hash })
+      } else if (!hash) {
+        const home = data.pages.find((p) => p.isHome)
+        if (home) setView({ kind: "page", slug: home.slug })
+      }
+    }
+    window.addEventListener("hashchange", onHash)
+    return () => window.removeEventListener("hashchange", onHash)
+  }, [data])
+
   const navigatePage = (slug: string) => {
     setView({ kind: "page", slug })
+    window.location.hash = slug
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
   const navigatePost = (postId: string) => {
     setView({ kind: "blog", postId })
+    window.location.hash = `blog/${postId}`
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -100,7 +145,7 @@ export function MemorialApp() {
   }
 
   return (
-    <div className="relative flex min-h-[100svh] flex-col bg-background">
+    <div className="relative flex min-h-[100svh] flex-col bg-background" style={{ fontFamily: fontFamilyFor(setting.globalFontKey) }}>
       <CustomFontInjector fonts={data.fonts} />
       <TopNav pages={navPages} setting={setting} currentSlug={view.kind === "page" ? view.slug : "blog"} onNavigate={navigatePage} />
 

@@ -424,3 +424,22 @@ Stage Summary:
 - 17 custom TTF fonts installed (from user's RAR file)
 - Viewer uses portal — works on top of all elements (navbar, header, sections)
 - Lazy loading already in place (IntersectionObserver + 200px rootMargin)
+
+---
+Task ID: round-14
+Agent: main (z.ai code)
+Task: Fix global font application, fix upload route (again), add URL routing, fix video seek RTL direction
+
+Work Log:
+- RECREATED upload route (src/app/api/upload/route.ts) — was deleted again. Tested: upload returns 201.
+- FIXED global font application: added `style={{ fontFamily: fontFamilyFor(setting.globalFontKey) }}` on the root div in memorial-app.tsx. Previously only section-level fonts were applied, not body-level. Now globalFontKey setting applies to the ENTIRE site (nav, footer, all sections).
+- FIXED video seek RTL direction: in image-viewer.tsx, the seek function used `(e.clientX - rect.left) / rect.width` which is LTR. Changed to `(rect.right - e.clientX) / rect.width` for RTL — clicking left now seeks to end, clicking right seeks to beginning. Verified: left click → currentTime=3 (end of 3s video) ✓
+- ADDED URL routing via hash: navigatePage sets `window.location.hash = slug`, navigatePost sets `window.location.hash = "blog/postId"`. On load and hashchange, the app reads the hash and sets the view accordingly. Supports browser back/forward. Verified: #biography → bio page, #gallery → gallery page, # → home.
+- Fonts: 17 custom TTF fonts from user's RAR file are registered in DB. @font-face CSS is injected via CustomFontInjector. Font picker in settings and per-section shows custom fonts with "(سفارشی)" tag.
+
+Stage Summary:
+- Upload route recreated and working (201)
+- Global font setting now applies to entire site (not just sections)
+- Video seek fixed for RTL (left = end, right = beginning)
+- URL routing added (#biography, #gallery, #blog/postId)
+- 0 lint errors, 0 console errors

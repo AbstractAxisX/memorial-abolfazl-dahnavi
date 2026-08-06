@@ -156,7 +156,9 @@ export function ImageViewer({
     const v = videoRef.current
     if (!v || !duration) return
     const rect = e.currentTarget.getBoundingClientRect()
-    v.currentTime = ((e.clientX - rect.left) / rect.width) * duration
+    // RTL: right = 0%, left = 100%. So we measure from right.
+    const frac = (rect.right - e.clientX) / rect.width
+    v.currentTime = Math.max(0, Math.min(1, frac)) * duration
   }
 
   const download = async () => {
