@@ -183,26 +183,80 @@ function HeroSection({ section, setting, onNavigate }: { section: Section; setti
 
 // ============ TEXT ============
 function TextSection({ section }: { section: Section }) {
-  const cfg = parseConfig<{ content: string; image: string | null; layout: string }>(section, { content: "", image: null, layout: "full" })
-  const flip = cfg.layout === "half-left"
+  const cfg = parseConfig<{
+    content: string; image: string | null;
+    imagePosition: string; imageSize: string; imageRadius: string; imageBorder: string; imageShadow: string
+  }>(section, { content: "", image: null, imagePosition: "top", imageSize: "natural", imageRadius: "md", imageBorder: "none", imageShadow: "sm" })
+
+  const radiusMap: Record<string, string> = { none: "rounded-none", sm: "rounded-md", md: "rounded-xl", lg: "rounded-2xl", full: "rounded-full" }
+  const borderMap: Record<string, string> = { none: "", thin: "border border-[oklch(0.76_0.14_80/0.2)]", medium: "border-2 border-[oklch(0.76_0.14_80/0.35)]", thick: "border-4 border-[oklch(0.76_0.14_80/0.5)]" }
+  const shadowMap: Record<string, string> = { none: "", sm: "shadow-sm", md: "shadow-md", lg: "shadow-xl" }
+  const sizePx: Record<string, number | undefined> = { xs: 80, sm: 120, md: 200, lg: 320 }
+  const isFixed = cfg.imageSize !== "natural" && cfg.imageSize !== "full" && cfg.imageSize !== undefined
+  const imgWidth = sizePx[cfg.imageSize] || undefined
+
+  const imgEl = cfg.image ? (
+    <img
+      src={cfg.image}
+      alt={section.title ?? ""}
+      className={`object-cover transition-transform duration-700 hover:scale-105 ${radiusMap[cfg.imageRadius] || radiusMap.md} ${borderMap[cfg.imageBorder] || ""} ${shadowMap[cfg.imageShadow] || shadowMap.sm} ${isFixed ? "h-auto" : "w-full"}`}
+      style={isFixed ? { width: imgWidth } : undefined}
+      loading="lazy"
+    />
+  ) : null
+
+  const textEl = <Paragraphs text={cfg.content} />
+
+  const pos = cfg.imagePosition || "top"
+
   return (
     <section className="px-5 py-14 sm:py-20">
       <div className="mx-auto max-w-3xl">
         {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-        {cfg.image ? (
-          <div className={`mt-10 flex flex-col ${flip ? "sm:flex-row-reverse" : "sm:flex-row"} gap-6 sm:gap-8 items-start`}>
-            <div className="w-full sm:w-2/5">
-              <div className="relative overflow-hidden rounded-2xl border border-[oklch(0.74_0.135_82/0.25)] shadow-lg shadow-[oklch(0.36_0.07_168/0.12)]">
-                <img src={cfg.image} alt={section.title ?? ""} className="w-full h-56 sm:h-72 object-cover transition-transform duration-700 hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.36_0.07_168/0.15)] to-transparent" />
-              </div>
-            </div>
-            <div className="flex-1">{section.title ? null : <h3 className="font-display text-2xl sm:text-3xl emerald-text mb-4">{section.title}</h3>}<Paragraphs text={cfg.content} /></div>
-          </div>
-        ) : (
+
+        {!cfg.image && (
           <div className="mt-8 parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.18)] p-6 sm:p-8 shadow-sm">
             {!section.title && <QuoteIcon className="h-6 w-6 text-[oklch(0.74_0.135_82/0.5)] mb-3" />}
-            <Paragraphs text={cfg.content} />
+            {textEl}
+          </div>
+        )}
+
+        {/* Image on top */}
+        {cfg.image && pos === "top" && (
+          <div className="mt-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-4">
+              {imgEl}
+            </motion.div>
+            <div className="parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.18)] p-6 sm:p-8 shadow-sm">{textEl}</div>
+          </div>
+        )}
+
+        {/* Image on bottom */}
+        {cfg.image && pos === "bottom" && (
+          <div className="mt-8">
+            <div className="parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.18)] p-6 sm:p-8 shadow-sm mb-4">{textEl}</div>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>{imgEl}</motion.div>
+          </div>
+        )}
+
+        {/* Image centered (standalone) */}
+        {cfg.image && pos === "center" && (
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.18)] p-6 sm:p-8 shadow-sm w-full">{textEl}</div>
+            {imgEl}
+          </div>
+        )}
+
+        {/* Float right — text wraps around image */}
+        {cfg.image && (pos === "right" || pos === "left") && (
+          <div className="mt-8">
+            <div className="parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.18)] p-6 sm:p-8 shadow-sm">
+              <div className={pos === "right" ? "float-right ml-4 mb-2" : "float-left mr-4 mb-2"} style={isFixed ? { width: imgWidth } : { maxWidth: "200px" }}>
+                {imgEl}
+              </div>
+              {textEl}
+              <div className="clear-both" />
+            </div>
           </div>
         )}
       </div>

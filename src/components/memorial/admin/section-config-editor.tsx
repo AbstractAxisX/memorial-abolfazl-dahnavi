@@ -84,17 +84,69 @@ function HeroEditor({ c, up, pages }: { c: Record<string, unknown>; up: (p: Reco
 }
 
 function TextEditor({ c, up }: { c: Record<string, unknown>; up: (p: Record<string, unknown>) => void }) {
+  const hasImage = !!(c.image as string)
   return (
     <div className="space-y-3">
       <Field label="متن (Enter = پاراگراف جدید)"><Textarea value={(c.content as string) || ""} onChange={(e) => up({ content: e.target.value })} rows={6} /></Field>
-      <Field label="چیدمان">
-        <Select value={(c.layout as string) || "full"} onChange={(e) => up({ layout: e.target.value })}>
-          <option value="full">تمام‌عرض (متن یا متن+تصویر پایین)</option>
-          <option value="half-left">تصویر کنار متن (راست)</option>
-          <option value="half-right">تصویر کنار متن (چپ)</option>
-        </Select>
-      </Field>
       <Field label="تصویر (اختیاری)"><ImageUpload value={(c.image as string) || null} onChange={(v) => up({ image: v })} aspect="aspect-video w-full max-w-md" /></Field>
+
+      {hasImage && (
+        <>
+          <div className="rounded-xl border border-[oklch(0.76_0.14_80/0.15)] bg-ivory/40 p-3 space-y-3">
+            <p className="text-xs font-medium text-[oklch(0.39_0.085_168)]">تنظیمات تصویر</p>
+
+            <Field label="محل نمایش تصویر نسبت به متن">
+              <Select value={(c.imagePosition as string) || "top"} onChange={(e) => up({ imagePosition: e.target.value })}>
+                <option value="top">بالای متن</option>
+                <option value="bottom">پایین متن</option>
+                <option value="right">راست کنار متن (متن می‌چینه)</option>
+                <option value="left">چپ کنار متن (متن می‌چینه)</option>
+                <option value="center">مرکز (بدون متن کنار)</option>
+              </Select>
+            </Field>
+
+            <Field label="سایز تصویر">
+              <Select value={(c.imageSize as string) || "natural"} onChange={(e) => up({ imageSize: e.target.value })}>
+                <option value="natural">طبیعی (سایز واقعی)</option>
+                <option value="xs">خیلی کوچک (۸۰px)</option>
+                <option value="sm">کوچک (۱۲۰px)</option>
+                <option value="md">متوسط (۲۰۰px)</option>
+                <option value="lg">بزرگ (۳۲۰px)</option>
+                <option value="full">تمام عرض</option>
+              </Select>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="گوشه">
+                <Select value={(c.imageRadius as string) || "md"} onChange={(e) => up({ imageRadius: e.target.value })}>
+                  <option value="none">تیز</option>
+                  <option value="sm">کمی گرد</option>
+                  <option value="md">گرد</option>
+                  <option value="lg">گرد زیاد</option>
+                  <option value="full">دایره</option>
+                </Select>
+              </Field>
+              <Field label="حاشیه">
+                <Select value={(c.imageBorder as string) || "none"} onChange={(e) => up({ imageBorder: e.target.value })}>
+                  <option value="none">بدون حاشیه</option>
+                  <option value="thin">نازک</option>
+                  <option value="medium">متوسط</option>
+                  <option value="thick">ضخیم</option>
+                </Select>
+              </Field>
+            </div>
+
+            <Field label="سایه">
+              <Select value={(c.imageShadow as string) || "sm"} onChange={(e) => up({ imageShadow: e.target.value })}>
+                <option value="none">بدون سایه</option>
+                <option value="sm">ملایم</option>
+                <option value="md">متوسط</option>
+                <option value="lg">زیاد</option>
+              </Select>
+            </Field>
+          </div>
+        </>
+      )}
     </div>
   )
 }
