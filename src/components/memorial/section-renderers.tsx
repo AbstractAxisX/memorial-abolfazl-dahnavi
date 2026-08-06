@@ -345,8 +345,7 @@ function useEffectInterval(fn: () => void | (() => void), deps: unknown[]) {
 // ============ VIDEO ============
 function VideoSection({ section }: { section: Section }) {
   const cfg = parseConfig<{ url: string | null; poster: string | null; title: string; description: string }>(section, { url: null, poster: null, title: "", description: "" })
-  const [open, setOpen] = useState(false)
-  const [originRect, setOriginRect] = useState<DOMRect | null>(null)
+  const [viewer, setViewer] = useState<{ rect: DOMRect } | null>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
 
   if (!cfg.url) {
@@ -364,16 +363,10 @@ function VideoSection({ section }: { section: Section }) {
     <section className="px-5 py-14 sm:py-20">
       <div className="mx-auto max-w-3xl">
         {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.6 }}
-          className="mt-8"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.6 }} className="mt-8">
           <button
             ref={btnRef}
-            onClick={() => { if (btnRef.current) { setOriginRect(btnRef.current.getBoundingClientRect()); setOpen(true) } }}
+            onClick={() => { if (btnRef.current) setViewer({ rect: btnRef.current.getBoundingClientRect() }) }}
             className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-video mx-auto block"
           >
             <video src={cfg.url} poster={cfg.poster || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />
@@ -392,16 +385,14 @@ function VideoSection({ section }: { section: Section }) {
           </button>
         </motion.div>
       </div>
-      <AnimatePresence>
-        {open && originRect && (
-          <ImageViewer
-            items={[{ url: cfg.url, type: "video", caption: cfg.title || section.title, description: cfg.description, thumb: cfg.poster }]}
-            startIndex={0}
-            originRect={originRect}
-            onClose={() => setOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+      {viewer && (
+        <ImageViewer
+          items={[{ url: cfg.url!, type: "video" as const, caption: cfg.title || section.title, description: cfg.description, thumb: cfg.poster }]}
+          startIndex={0}
+          originRect={viewer.rect}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </section>
   )
 }

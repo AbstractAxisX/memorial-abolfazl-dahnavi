@@ -349,3 +349,55 @@ Stage Summary:
 - Download button always visible
 - 0 lint errors, 0 console errors
 - VLM: 8-9/10
+
+---
+Task ID: round-12
+Agent: main (z.ai code)
+Task: Rebuild gallery viewer with GSAP FLIP from scratch — no forwardRef, no arrows, opens from clicked position
+
+Work Log:
+- Removed AnimatedOrnaments and ScrollProgress (floating shapes) from all pages — 0 floating elements
+- Installed GSAP for iOS-style animations
+- Built new image-viewer.tsx from scratch (no forwardRef, simple props):
+  - Receives `originRect: DOMRect` from parent (captured via getBoundingClientRect — viewport-relative, works regardless of scroll)
+  - GSAP sets initial position to originRect.top/left/width/height, then animates to center of viewport
+  - iOS cubic-bezier(0.32, 0.72, 0, 1) easing (exact iOS spring curve)
+  - Dark blurred background (rgba(0,0,0,0.7) + blur(22px))
+  - Media at natural size (max 82% viewport width, 55% viewport height, 400px cap)
+  - Caption in glass box below media
+  - Download button below caption
+  - Close button top-left
+  - Counter top-right
+  - NO slide arrows — only keyboard (ArrowLeft/Right, Escape, Space)
+  - Simple video player: timeline + play/pause + time display
+  - Body scroll locked when open
+- Built new gallery-section.tsx from scratch:
+  - iOS Photos style folder cards: 3x3 thumbnail grid inside each square card
+  - Category name + photo/video count
+  - Click category → normal scrollable page (NOT overflow hidden)
+  - Lazy loading with IntersectionObserver (200px rootMargin)
+  - Click item → captures getBoundingClientRect → passes to ImageViewer
+  - Filter tabs (all/photo/video)
+- Updated VideoSection to use same prop-based ImageViewer pattern
+- Fixed hydration issue: removed forwardRef/useImperativeHandle pattern (was breaking client hydration)
+
+Test results:
+- Gallery: 5 category cards with 3x3 grids
+- Click category → expanded view, page scrolls naturally
+- Scroll to bottom → click image → viewer opens from EXACT clicked position (rect.top=337)
+- Download button visible ✓
+- Image centered ✓
+- Background blurred ✓
+- Close works ✓
+- VLM: 9.5/10
+- 0 lint errors, 0 console errors
+
+Stage Summary:
+- Gallery viewer rebuilt from scratch with GSAP
+- Opens from exact clicked position (getBoundingClientRect = viewport-relative)
+- No forwardRef (was causing hydration crash)
+- No slide arrows
+- No floating ornaments
+- iOS Photos folder cards
+- Normal page scroll in category view
+- 0.55vh media height ensures download button always visible
