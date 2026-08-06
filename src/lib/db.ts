@@ -7,7 +7,9 @@ const globalForPrisma = globalThis as unknown as {
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ['query'],
+    log: ['error'],
   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+// Always cache on globalThis — in production too! Without this, each request
+// creates a new PrismaClient instance, causing memory leaks and crashes.
+globalForPrisma.prisma = db
