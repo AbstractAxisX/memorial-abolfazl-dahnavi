@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Heart, CalendarDays, MapPin, ChevronLeft, ChevronRight, Quote as QuoteIcon,
-  Play, Send, MessageSquareHeart, type LucideIcon,
+  Play, Send, MessageSquareHeart, Download, type LucideIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { Section, SiteSetting, BlogPost, GuestMessage, MediaFile } from "@/lib/store"
@@ -15,6 +15,7 @@ import { OrnamentDivider, SectionTitle } from "./ornaments"
 import { DecorativeBg } from "./decorative-bg"
 import { VideoPlayer } from "./video-player"
 import { InstagramPlayer, type ReelVideo } from "./instagram-player"
+import { GallerySection } from "./gallery-new"
 import { toPersianDigits } from "./biography-view"
 import { Lightbox } from "./lightbox"
 
@@ -244,129 +245,6 @@ function ImageSection({ section }: { section: Section }) {
   )
 }
 
-// ============ GALLERY ============
-type GalleryItemT = { type: string; url: string; thumb?: string | null; caption?: string | null; description?: string | null }
-function GallerySection({ section, media }: { section: Section; media: MediaFile[] }) {
-  const cfg = parseConfig<{ items: GalleryItemT[]; filterable: boolean; columns: number; source: string; category: string }>(section, { items: [], filterable: true, columns: 3, source: "manual", category: "" })
-  const [filter, setFilter] = useState<"all" | "photo" | "video">("all")
-  const [lbIndex, setLbIndex] = useState<number | null>(null)
-  const [igVideos, setIgVideos] = useState<ReelVideo[] | null>(null)
-  const [igStartIndex, setIgStartIndex] = useState(0)
-
-  // Build items: either from config (manual) or from media library
-  const items: GalleryItemT[] = useMemo(() => {
-    if (cfg.source === "media") {
-      let m = media
-      if (cfg.category) m = m.filter((x) => (x.category || "عمومی") === cfg.category)
-      return m.map((x) => ({
-        type: x.type === "video" ? "video" : "photo",
-        url: x.url,
-        thumb: x.thumb,
-        caption: x.title || x.alt,
-        description: x.description,
-      }))
-    }
-    return cfg.items || []
-  }, [cfg.source, cfg.category, cfg.items, media])
-
-  const filtered = useMemo(() => (filter === "all" ? items : items.filter((i) => i.type === filter)), [items, filter])
-
-  if (items.length === 0) {
-    return (
-      <section className="px-5 py-14">
-        <div className="mx-auto max-w-4xl flex flex-col items-center gap-4 text-center">
-          {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-          <img src="/decor/dove.png" alt="" className="h-28 w-28 opacity-70" />
-          <p className="text-muted-foreground">
-            {cfg.source === "media"
-              ? "هنوز فایلی در کتابخانه رسانه نیست. از تب «رسانه» فایل آپلود کنید."
-              : "هنوز موردی ثبت نشده است. در ویرایشگر این بخش، موارد را اضافه کنید یا منبع را روی «کتابخانه رسانه» بگذارید."}
-          </p>
-        </div>
-      </section>
-    )
-  }
-
-  // Masonry-like layout: varying heights for visual interest
-  return (
-    <section className="px-5 py-14 sm:py-20">
-      <div className="mx-auto max-w-5xl">
-        {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-        {cfg.filterable && (
-          <div className="mt-8 flex items-center justify-center gap-2">
-            {(["all", "photo", "video"] as const).map((f) => {
-              const n = f === "all" ? items.length : items.filter((i) => i.type === f).length
-              if (n === 0 && f !== "all") return null
-              return (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-sm font-medium transition active:scale-95 ${filter === f ? "bg-[oklch(0.39_0.085_168)] text-ivory shadow-md shadow-[oklch(0.39_0.085_168/0.3)]" : "border border-[oklch(0.76_0.14_80/0.3)] bg-ivory text-[oklch(0.39_0.085_168)] hover:bg-[oklch(0.95_0.018_82)]"}`}>
-                  {f === "all" ? "همه" : f === "photo" ? "عکس‌ها" : "ویدیوها"} ({toPersianDigits(n)})
-                </button>
-              )
-            })}
-          </div>
-        )}
-        {/* Masonry-style grid with varying row spans for visual richness */}
-        <motion.div layout className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 auto-rows-[120px] sm:auto-rows-[160px]">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((item, i) => {
-              // Some items span 2 rows/cols for masonry effect
-              const span = i % 7 === 0 ? "row-span-2 col-span-2" : i % 5 === 0 ? "row-span-2" : ""
-              return (
-                <motion.button
-                  key={item.url + i}
-                  layout
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.4, delay: i * 0.03 }}
-                  onClick={() => {
-                    if (item.type === "video") {
-                      // Open Instagram-style player for videos
-                      const vids = filtered.filter((it) => it.type === "video").map((it) => ({ url: it.url, title: it.caption, description: it.description }))
-                      const vidIdx = vids.findIndex((v) => v.url === item.url)
-                      setIgVideos(vids)
-                      setIgStartIndex(vidIdx >= 0 ? vidIdx : 0)
-                    } else {
-                      setLbIndex(i)
-                    }
-                  }}
-                  className={`group relative overflow-hidden rounded-xl border border-[oklch(0.76_0.14_80/0.2)] bg-ivory shadow-sm hover:shadow-xl transition-shadow ${span}`}
-                >
-                  {item.type === "video" ? (
-                    <>
-                      <video src={item.url} muted playsInline className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-[oklch(0.12_0.02_165/0.35)] group-hover:bg-[oklch(0.12_0.02_165/0.2)] transition">
-                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/85 text-[oklch(0.39_0.085_168)] shadow-lg backdrop-blur">
-                          <Play className="h-5 w-5 mr-0.5" fill="currentColor" />
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <img src={item.thumb || item.url} alt={item.caption ?? ""} loading="lazy" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                  )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[oklch(0.39_0.085_168/0.7)] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {item.caption && (
-                    <div className="pointer-events-none absolute bottom-0 inset-x-0 p-3 translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
-                      <p className="text-xs text-white/90 line-clamp-2 text-balance">{item.caption}</p>
-                    </div>
-                  )}
-                </motion.button>
-              )
-            })}
-          </AnimatePresence>
-        </motion.div>
-      </div>
-      <Lightbox items={filtered.filter((i) => i.type !== "video").map((i) => ({ id: i.url, type: i.type, url: i.url, thumb: i.thumb ?? null, caption: i.caption ?? null, order: 0, createdAt: "", updatedAt: "" }))} index={lbIndex} onClose={() => setLbIndex(null)} onNavigate={setLbIndex} />
-      <AnimatePresence>
-        {igVideos && (
-          <InstagramPlayer videos={igVideos} startIndex={igStartIndex} onClose={() => setIgVideos(null)} />
-        )}
-      </AnimatePresence>
-    </section>
-  )
-}
-
 // ============ SLIDER ============
 function SliderSection({ section, media }: { section: Section; media: MediaFile[] }) {
   const cfg = parseConfig<{ items: GalleryItemT[]; autoplay: boolean; interval: number; transition: string; arrows: boolean; dots: boolean; height: string; source: string; category: string }>(section, { items: [], autoplay: false, interval: 4000, transition: "fade", arrows: true, dots: true, height: "lg", source: "manual", category: "" })
@@ -377,13 +255,7 @@ function SliderSection({ section, media }: { section: Section; media: MediaFile[
     if (cfg.source === "media") {
       let m = media
       if (cfg.category) m = m.filter((x) => (x.category || "عمومی") === cfg.category)
-      return m.map((x) => ({
-        type: x.type === "video" ? "video" : "photo",
-        url: x.url,
-        thumb: x.thumb,
-        caption: x.title || x.alt,
-        description: x.description,
-      }))
+      return m.map((x) => ({ type: x.type === "video" ? "video" : "photo", url: x.url, thumb: x.thumb, caption: x.title || x.alt, description: x.description }))
     }
     return cfg.items || []
   }, [cfg.source, cfg.category, cfg.items, media])
@@ -394,21 +266,18 @@ function SliderSection({ section, media }: { section: Section; media: MediaFile[
     return () => clearInterval(t)
   }, [cfg.autoplay, cfg.interval, items.length])
 
-  const go = (delta: number) => {
-    setDir(delta)
-    setIdx((i) => (i + delta + items.length) % items.length)
-  }
+  const go = (delta: number) => { setDir(delta); setIdx((i) => (i + delta + items.length) % items.length) }
 
   const heights = { sm: "h-60 sm:h-72", md: "h-80 sm:h-96", lg: "h-96 sm:h-[32rem]" }
   const h = heights[cfg.height as keyof typeof heights] || heights.lg
 
+  const downloadCurrent = async () => {
+    if (!items[idx]) return
+    try { const res = await fetch(items[idx].url); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = items[idx].url.split("/").pop() || "download"; a.click(); URL.revokeObjectURL(url) } catch { window.open(items[idx].url, "_blank") }
+  }
+
   if (items.length === 0) {
-    return (
-      <section className="px-5 py-14 text-center text-muted-foreground">
-        {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
-        <p className="mt-8">هنوز اسلایدی ثبت نشده است. در ویرایشگر این بخش، منبع را روی «کتابخانه رسانه» بگذارید یا موارد را دستی اضافه کنید.</p>
-      </section>
-    )
+    return (<section className="px-5 py-14 text-center text-muted-foreground">{section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}<p className="mt-8">هنوز اسلایدی ثبت نشده است.</p></section>)
   }
 
   return (
@@ -418,44 +287,49 @@ function SliderSection({ section, media }: { section: Section; media: MediaFile[
         <div className={`relative mt-8 overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] shadow-xl ${h}`}>
           <AnimatePresence initial={false} custom={dir} mode="popLayout">
             <motion.div
-              key={idx}
-              custom={dir}
-              initial={cfg.transition === "slide" ? { opacity: 0, x: dir * 80 } : { opacity: 0 }}
+              key={idx} custom={dir}
+              initial={cfg.transition === "slide" ? { opacity: 0, x: dir * 100 } : { opacity: 0 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={cfg.transition === "slide" ? { opacity: 0, x: dir * -80 } : { opacity: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              exit={cfg.transition === "slide" ? { opacity: 0, x: dir * -100 } : { opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="absolute inset-0"
             >
               {items[idx].type === "video" ? (
                 <video src={items[idx].url} className="h-full w-full object-cover" controls muted autoPlay />
               ) : (
-                <img src={items[idx].url} alt={items[idx].caption ?? ""} className="h-full w-full object-cover" />
+                <img src={items[idx].url} alt={items[idx].caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
               )}
               {items[idx].caption && (
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5">
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 pb-16">
                   <p className="text-white/95 text-sm sm:text-base text-balance">{items[idx].caption}</p>
                 </div>
               )}
             </motion.div>
           </AnimatePresence>
 
+          {/* Arrows — small */}
           {cfg.arrows && items.length > 1 && (
             <>
-              <button onClick={() => go(1)} className="absolute right-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-[oklch(0.36_0.07_168)] shadow-lg backdrop-blur hover:bg-white transition" aria-label="قبلی">
-                <ChevronRight className="h-5 w-5" />
-              </button>
-              <button onClick={() => go(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-[oklch(0.36_0.07_168)] shadow-lg backdrop-blur hover:bg-white transition" aria-label="بعدی">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
+              <button onClick={() => go(1)} className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[oklch(0.39_0.085_168)] shadow-lg backdrop-blur hover:bg-white transition active:scale-90" aria-label="قبلی"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => go(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/70 text-[oklch(0.39_0.085_168)] shadow-lg backdrop-blur hover:bg-white transition active:scale-90" aria-label="بعدی"><ChevronLeft className="h-4 w-4" /></button>
             </>
           )}
+
+          {/* Dots */}
           {cfg.dots && items.length > 1 && (
             <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5">
-              {items.map((_, i) => (
-                <button key={i} onClick={() => { setDir(i > idx ? 1 : -1); setIdx(i) }} className={`h-2 rounded-full transition-all ${i === idx ? "w-6 bg-[oklch(0.74_0.135_82)]" : "w-2 bg-white/60"}`} aria-label={`اسلاید ${i + 1}`} />
-              ))}
+              {items.map((_, i) => (<button key={i} onClick={() => { setDir(i > idx ? 1 : -1); setIdx(i) }} className={`h-1.5 rounded-full transition-all ${i === idx ? "w-5 bg-[oklch(0.76_0.14_80)]" : "w-1.5 bg-white/60"}`} aria-label={`اسلاید ${i + 1}`} />))}
             </div>
           )}
+
+          {/* Glass download button — bottom center */}
+          <motion.button
+            onClick={downloadCurrent}
+            whileTap={{ scale: 0.95 }}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-4 py-1.5 text-xs text-white shadow-lg hover:bg-white/25 transition z-10"
+          >
+            <Download className="h-3.5 w-3.5" /> دانلود تصویر
+          </motion.button>
         </div>
       </div>
     </section>
