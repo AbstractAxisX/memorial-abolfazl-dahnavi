@@ -18,29 +18,8 @@ function fmtTime(s: number): string {
   if (!isFinite(s) || s < 0) s = 0
   const m = Math.floor(s / 60)
   const sec = Math.floor(s % 60)
-  return `${toPersianDigits(m)}:${toPersianDigits(sec).padStart(2, "۰")}`
+  return toPersianDigits(m) + ":" + toPersianDigits(sec).padStart(2, "0")
 }
-
-const cubicBezier = (x1: number, y1: number, x2: number, y2: number) => {
-  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx
-  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by
-  const sx = (t: number) => ((ax * t + bx) * t + cx) * t
-  const sy = (t: number) => ((ay * t + by) * t + cy) * t
-  const dx = (t: number) => (3 * ax * t + 2 * bx) * t + cx
-  return (x: number) => {
-    if (x <= 0) return 0; if (x >= 1) return 1
-    let t = x
-    for (let i = 0; i < 8; i++) {
-      const e = sx(t) - x
-      if (Math.abs(e) < 1e-6) break
-      const d = dx(t)
-      if (Math.abs(d) < 1e-6) break
-      t -= e / d
-    }
-    return sy(Math.min(1, Math.max(0, t)))
-  }
-}
-const EASE_IOS = cubicBezier(0.32, 0.72, 0, 1)
 
 export function ImageViewer({
   items,
@@ -70,7 +49,6 @@ export function ImageViewer({
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
-  // GSAP open animation — runs after portal mounts
   useEffect(() => {
     if (!mounted) return
     const media = mediaRef.current
@@ -87,16 +65,16 @@ export function ImageViewer({
 
     gsap.set(media, { top: originRect.top, left: originRect.left, width: originRect.width, height: originRect.height, borderRadius: 14, scale: 1, opacity: 1 })
     gsap.set(backdrop, { opacity: 0 })
-    gsap.set(caption, { opacity: 0, y: 10, top: fy + S + 18 })
-    gsap.set(closeBtn, { opacity: 0, scale: 0.8 })
+    if (caption) gsap.set(caption, { opacity: 0, y: 10, top: fy + S + 18 })
+    if (closeBtn) gsap.set(closeBtn, { opacity: 0, scale: 0.8 })
 
     document.body.style.overflow = "hidden"
 
     const tl = gsap.timeline()
     tl.to(backdrop, { opacity: 1, duration: 0.3, ease: "power2.out" }, 0)
-      .to(media, { top: fy, left: fx, width: S, height: S, borderRadius: 24, duration: 0.5, ease: EASE_IOS }, 0)
-      .to(caption, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0.2)
-      .to(closeBtn, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 0.22)
+      .to(media, { top: fy, left: fx, width: S, height: S, borderRadius: 24, duration: 0.5, ease: "power2.inOut" }, 0)
+    if (caption) tl.to(caption, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, 0.2)
+    if (closeBtn) tl.to(closeBtn, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 0.22)
 
     return () => { gsap.killTweensOf([media, backdrop, caption, closeBtn]) }
   }, [mounted, originRect])
@@ -111,8 +89,8 @@ export function ImageViewer({
     gsap.timeline({ onComplete: () => { onClose(); document.body.style.overflow = "" } })
       .to(backdrop, { opacity: 0, duration: 0.25 }, 0)
       .to(media, { scale: 0.85, opacity: 0, borderRadius: 14, duration: 0.3, ease: "power2.in" }, 0)
-      .to(caption, { opacity: 0, y: 8, duration: 0.2 }, 0)
-      .to(closeBtn, { opacity: 0, scale: 0.8, duration: 0.2 }, 0)
+    if (caption) gsap.timeline().to(caption, { opacity: 0, y: 8, duration: 0.2 }, 0)
+    if (closeBtn) gsap.timeline().to(closeBtn, { opacity: 0, scale: 0.8, duration: 0.2 }, 0)
   }
 
   useEffect(() => {
@@ -156,7 +134,6 @@ export function ImageViewer({
     const v = videoRef.current
     if (!v || !duration) return
     const rect = e.currentTarget.getBoundingClientRect()
-    // RTL: right = 0%, left = 100%. So we measure from right.
     const frac = (rect.right - e.clientX) / rect.width
     v.currentTime = Math.max(0, Math.min(1, frac)) * duration
   }
@@ -176,9 +153,6 @@ export function ImageViewer({
 
   if (!mounted) return null
 
-  // Portal to document.body — escapes ALL ancestor transforms/filters
-  // This ensures position:fixed is truly relative to viewport,
-  // and the blur backdrop covers EVERYTHING (navbar, header, sections)
   return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 99999 }} onClick={handleClose}>
       <div ref={backdropRef} style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)" }} />
@@ -196,7 +170,7 @@ export function ImageViewer({
               <button onClick={togglePlay} className="text-white shrink-0">{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
               <span className="text-[10px] text-white tabular-nums shrink-0" dir="ltr">{fmtTime(current)}</span>
               <div onClick={seek} className="relative h-1.5 flex-1 rounded-full bg-white/20 cursor-pointer">
-                <div className="absolute inset-y-0 right-0 rounded-full bg-[oklch(0.76_0.14_80)]" style={{ width: `${progress * 100}%` }} />
+                <div className="absolute inset-y-0 right-0 rounded-full bg-[oklch(0.76_0.14_80)]" style={{ width: (progress * 100) + "%" }} />
               </div>
               <span className="text-[10px] text-white tabular-nums shrink-0" dir="ltr">{fmtTime(duration)}</span>
             </div>
@@ -218,7 +192,7 @@ export function ImageViewer({
         </button>
       </div>
 
-      <button ref={closeRef} onClick={(e) => { e.stopPropagation(); handleClose() }} style={{ position: "fixed", top: "max(1.25rem, env(safe-area-inset-top))", left: "1.25rem", zIndex: 20 }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 transition" aria-label="بستن">
+      <button ref={closeRef} onClick={(e) => { e.stopPropagation(); handleClose() }} style={{ position: "fixed", top: "max(1.25rem, env(safe-area-inset-top))", left: "1.25rem", zIndex: 20 }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur hover:bg-white/25 transition" aria-label="bsten">
         <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M2 2l10 10M12 2 2 12" /></svg>
       </button>
 

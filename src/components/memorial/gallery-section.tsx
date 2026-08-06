@@ -6,7 +6,7 @@ import { ChevronLeft, Film } from "lucide-react"
 import type { Section, MediaFile } from "@/lib/store"
 import { parseConfig } from "@/lib/store"
 import { SectionTitle } from "./ornaments"
-import { ImageViewer, type ViewerItem } from "./image-viewer"
+import { ImageViewer } from "./viewer"
 import { toPersianDigits } from "./biography-view"
 
 type ItemT = { type: string; url: string; thumb?: string | null; caption?: string | null; description?: string | null; category?: string }
@@ -14,25 +14,30 @@ type ItemT = { type: string; url: string; thumb?: string | null; caption?: strin
 export function GallerySection({ section, media }: { section: Section; media: MediaFile[] }) {
   const cfg = parseConfig<{ items: ItemT[]; source: string; category: string }>(section, { items: [], source: "manual", category: "" })
   const [openCategory, setOpenCategory] = useState<string | null>(null)
-  const [viewer, setViewer] = useState<{ items: ViewerItem[]; index: number; rect: DOMRect } | null>(null)
+  const [viewerItems, setViewerItems] = useState<any[]>([])
+  const [viewerIndex, setViewerIndex] = useState(0)
+  const [viewerRect, setViewerRect] = useState<DOMRect | null>(null)
 
   const allItems: ItemT[] = useMemo(() => {
     if (cfg.source === "media") {
       let m = media
-      if (cfg.category) m = m.filter((x) => (x.category || "عمومی") === cfg.category)
+      if (cfg.category) m = m.filter((x) => (x.category || "general") === cfg.category)
       return m.map((x) => ({
         type: x.type === "video" ? "video" : "photo",
-        url: x.url, thumb: x.thumb, caption: x.title || x.alt, description: x.description,
-        category: x.category || "عمومی",
+        url: x.url,
+        thumb: x.thumb,
+        caption: x.title || x.alt,
+        description: x.description,
+        category: x.category || "general",
       }))
     }
-    return (cfg.items || []).map((i) => ({ ...i, category: "همه" }))
+    return (cfg.items || []).map((i) => ({ ...i, category: "all" }))
   }, [cfg.source, cfg.category, cfg.items, media])
 
   const categories = useMemo(() => {
     const groups: Record<string, ItemT[]> = {}
     allItems.forEach((item) => {
-      const cat = item.category || "عمومی"
+      const cat = item.category || "general"
       if (!groups[cat]) groups[cat] = []
       groups[cat].push(item)
     })
@@ -45,7 +50,7 @@ export function GallerySection({ section, media }: { section: Section; media: Me
         <div className="mx-auto max-w-4xl flex flex-col items-center gap-4 text-center">
           {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
           <img src="/decor/dove.png" alt="" className="h-28 w-28 opacity-70" />
-          <p className="text-muted-foreground">هنوز فایلی در کتابخانه رسانه نیست. از تب «رسانه» فایل آپلود کنید.</p>
+          <p className="text-muted-foreground">هنوز فایلی در کتابخانه رسانه نیست.</p>
         </div>
       </section>
     )
@@ -54,6 +59,18 @@ export function GallerySection({ section, media }: { section: Section; media: Me
   const catNames = Object.keys(categories)
   const catItems = openCategory ? categories[openCategory] || [] : []
 
+  const openItem = (items: ItemT[], index: number, rect: DOMRect) => {
+    setViewerItems(items.map((it) => ({
+      url: it.url,
+      type: it.type === "video" ? "video" as const : "photo" as const,
+      caption: it.caption,
+      description: it.description,
+      thumb: it.thumb,
+    })))
+    setViewerIndex(index)
+    setViewerRect(rect)
+  }
+
   return (
     <section className="px-5 py-14 sm:py-20">
       <div className="mx-auto max-w-5xl">
@@ -61,8 +78,13 @@ export function GallerySection({ section, media }: { section: Section; media: Me
 
         <AnimatePresence mode="wait">
           {!openCategory && (
-            <motion.div key="folders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="mt-10 grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5">
+            <motion.div
+              key="folders"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-10 grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5"
+            >
               {catNames.map((catName) => {
                 const catMedia = categories[catName]
                 const thumbs = catMedia.slice(0, 9)
@@ -81,16 +103,16 @@ export function GallerySection({ section, media }: { section: Section; media: Me
                             )}
                           </div>
                         ))}
-                        {Array.from({ length: 9 - thumbs.length }).map((_, i) => (
-                          <div key={`e-${i}`} className="rounded-[18%] bg-[oklch(0.95_0.018_82)]" />
+                        {Array.from({ length: Math.max(0, 9 - thumbs.length) }).map((_, i) => (
+                          <div key={"e" + i} className="rounded-[18%] bg-[oklch(0.95_0.018_82)]" />
                         ))}
                       </div>
                     </div>
                     <div className="mt-2 text-[13px] font-semibold text-foreground sm:text-sm">{catName}</div>
                     <div className="mt-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
-                      {photoCount > 0 && `${toPersianDigits(photoCount)} عکس`}
+                      {photoCount > 0 && toPersianDigits(photoCount) + " عکس"}
                       {photoCount > 0 && videoCount > 0 && " · "}
-                      {videoCount > 0 && `${toPersianDigits(videoCount)} ویدیو`}
+                      {videoCount > 0 && toPersianDigits(videoCount) + " ویدیو"}
                     </div>
                   </button>
                 )
@@ -104,30 +126,29 @@ export function GallerySection({ section, media }: { section: Section; media: Me
               categoryName={openCategory}
               items={catItems}
               onBack={() => setOpenCategory(null)}
-              onOpenItem={(items, index, rect) => {
-                const viewerItems: ViewerItem[] = items.map((it) => ({
-                  url: it.url,
-                  type: it.type === "video" ? "video" : "photo",
-                  caption: it.caption,
-                  description: it.description,
-                  thumb: it.thumb,
-                }))
-                setViewer({ items: viewerItems, index, rect })
-              }}
+              onOpenItem={openItem}
             />
           )}
         </AnimatePresence>
       </div>
 
-      {viewer && (
-        <ImageViewer items={viewer.items} startIndex={viewer.index} originRect={viewer.rect} onClose={() => setViewer(null)} />
+      {viewerRect && viewerItems.length > 0 && (
+        <ImageViewer
+          items={viewerItems}
+          startIndex={viewerIndex}
+          originRect={viewerRect}
+          onClose={() => { setViewerRect(null); setViewerItems([]) }}
+        />
       )}
     </section>
   )
 }
 
 function CategoryView({ categoryName, items, onBack, onOpenItem }: {
-  categoryName: string; items: ItemT[]; onBack: () => void; onOpenItem: (items: ItemT[], index: number, rect: DOMRect) => void
+  categoryName: string
+  items: ItemT[]
+  onBack: () => void
+  onOpenItem: (items: ItemT[], index: number, rect: DOMRect) => void
 }) {
   const [filter, setFilter] = useState<"all" | "photo" | "video">("all")
   const filtered = useMemo(() => filter === "all" ? items : items.filter((i) => i.type === filter), [items, filter])
@@ -143,7 +164,11 @@ function CategoryView({ categoryName, items, onBack, onOpenItem }: {
           {(["all", "photo", "video"] as const).map((f) => {
             const n = f === "all" ? items.length : items.filter((i) => i.type === f).length
             if (n === 0 && f !== "all") return null
-            return <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${filter === f ? "bg-[oklch(0.39_0.085_168)] text-ivory" : "border border-[oklch(0.76_0.14_80/0.3)] text-[oklch(0.39_0.085_168)]"}`}>{f === "all" ? "همه" : f === "photo" ? "عکس" : "ویدیو"}</button>
+            return (
+              <button key={f} onClick={() => setFilter(f)} className={"rounded-full px-3 py-1 text-[11px] font-medium transition " + (filter === f ? "bg-[oklch(0.39_0.085_168)] text-ivory" : "border border-[oklch(0.76_0.14_80/0.3)] text-[oklch(0.39_0.085_168)]")}>
+                {f === "all" ? "همه" : f === "photo" ? "عکس" : "ویدیو"}
+              </button>
+            )
           })}
         </div>
       </div>
@@ -164,21 +189,26 @@ function LazyItem({ item, onClick }: { item: ItemT; onClick: (rect: DOMRect) => 
 
   useEffect(() => {
     if (!ref.current) return
-    const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setInView(true); observer.disconnect() } }, { rootMargin: "200px" })
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); observer.disconnect() }
+    }, { rootMargin: "200px" })
     observer.observe(ref.current)
     return () => observer.disconnect()
   }, [])
 
   return (
-    <button ref={ref} onClick={() => { if (ref.current) onClick(ref.current.getBoundingClientRect()) }}
-      className="group relative overflow-hidden rounded-xl border border-[oklch(0.76_0.14_80/0.15)] bg-ivory shadow-sm hover:shadow-md transition-shadow aspect-square">
+    <button
+      ref={ref}
+      onClick={() => { if (ref.current) onClick(ref.current.getBoundingClientRect()) }}
+      className="group relative overflow-hidden rounded-xl border border-[oklch(0.76_0.14_80/0.15)] bg-ivory shadow-sm hover:shadow-md transition-shadow aspect-square"
+    >
       {!inView && <div className="absolute inset-0 flex items-center justify-center bg-[oklch(0.95_0.018_82)]"><div className="h-5 w-5 rounded-full border-2 border-[oklch(0.76_0.14_80/0.2)] border-t-[oklch(0.76_0.14_80)] animate-spin" /></div>}
       {inView && (
         <>
           {item.type === "video" ? (
             <video src={item.url} muted playsInline preload="metadata" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
-            <img src={item.thumb || item.url} alt={item.caption ?? ""} loading="lazy" onLoad={() => setLoaded(true)} className={`h-full w-full object-cover transition-all duration-500 ${loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"} group-hover:scale-105`} />
+            <img src={item.thumb || item.url} alt={item.caption ?? ""} loading="lazy" onLoad={() => setLoaded(true)} className={"h-full w-full object-cover transition-all duration-500 " + (loaded ? "opacity-100 scale-100" : "opacity-0 scale-95") + " group-hover:scale-105"} />
           )}
           {item.type === "video" && <div className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50"><Film className="h-3 w-3 text-white" /></div>}
           {item.caption && <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2"><p className="text-white text-[10px] leading-tight line-clamp-2">{item.caption}</p></div>}
