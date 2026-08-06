@@ -6,7 +6,6 @@ import { ChevronRight, Grid3x3, X } from "lucide-react"
 import { useMemorial } from "@/lib/store"
 import { IconEl } from "@/lib/icon-registry"
 import { CustomFontInjector } from "@/lib/fonts"
-import { ScrollProgress, AnimatedOrnaments } from "./scroll-effects"
 import { PageRenderer, PageHeader } from "./page-renderer"
 import { MemorialFooter } from "./footer"
 import { AdminPanel } from "./admin/admin-panel"
@@ -103,8 +102,6 @@ export function MemorialApp() {
   return (
     <div className="relative flex min-h-[100svh] flex-col bg-background">
       <CustomFontInjector fonts={data.fonts} />
-      <ScrollProgress />
-      <AnimatedOrnaments />
       <TopNav pages={navPages} setting={setting} currentSlug={view.kind === "page" ? view.slug : "blog"} onNavigate={navigatePage} />
 
       <main className="flex-1 pb-28 sm:pb-12">

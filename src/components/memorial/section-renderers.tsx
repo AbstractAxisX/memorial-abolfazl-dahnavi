@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Heart, CalendarDays, MapPin, ChevronLeft, ChevronRight, Quote as QuoteIcon,
@@ -346,6 +346,8 @@ function useEffectInterval(fn: () => void | (() => void), deps: unknown[]) {
 function VideoSection({ section }: { section: Section }) {
   const cfg = parseConfig<{ url: string | null; poster: string | null; title: string; description: string }>(section, { url: null, poster: null, title: "", description: "" })
   const [open, setOpen] = useState(false)
+  const [originRect, setOriginRect] = useState<DOMRect | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
 
   if (!cfg.url) {
     return (
@@ -370,7 +372,8 @@ function VideoSection({ section }: { section: Section }) {
           className="mt-8"
         >
           <button
-            onClick={() => setOpen(true)}
+            ref={btnRef}
+            onClick={() => { if (btnRef.current) { setOriginRect(btnRef.current.getBoundingClientRect()); setOpen(true) } }}
             className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-video mx-auto block"
           >
             <video src={cfg.url} poster={cfg.poster || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />
@@ -390,10 +393,11 @@ function VideoSection({ section }: { section: Section }) {
         </motion.div>
       </div>
       <AnimatePresence>
-        {open && (
+        {open && originRect && (
           <ImageViewer
             items={[{ url: cfg.url, type: "video", caption: cfg.title || section.title, description: cfg.description, thumb: cfg.poster }]}
             startIndex={0}
+            originRect={originRect}
             onClose={() => setOpen(false)}
           />
         )}

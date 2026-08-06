@@ -6,7 +6,7 @@ import { ChevronLeft, Film, ImageIcon } from "lucide-react"
 import type { Section, MediaFile } from "@/lib/store"
 import { parseConfig } from "@/lib/store"
 import { SectionTitle } from "./ornaments"
-import { ImageViewer, type GalleryItem } from "./image-viewer"
+import { ImageViewer, type ViewerItem } from "./image-viewer"
 import { toPersianDigits } from "./biography-view"
 
 type ItemT = { type: string; url: string; thumb?: string | null; caption?: string | null; description?: string | null; category?: string }
@@ -15,7 +15,7 @@ export function GallerySection({ section, media }: { section: Section; media: Me
   const cfg = parseConfig<{ items: ItemT[]; source: string; category: string }>(section, { items: [], source: "manual", category: "" })
 
   const [openCategory, setOpenCategory] = useState<string | null>(null)
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
+  const [viewerState, setViewerState] = useState<{ items: ViewerItem[]; index: number; rect: DOMRect } | null>(null)
 
   // Build items from media library or manual
   const allItems: ItemT[] = useMemo(() => {
@@ -45,7 +45,6 @@ export function GallerySection({ section, media }: { section: Section; media: Me
     return groups
   }, [allItems])
 
-  // Empty state
   if (allItems.length === 0) {
     return (
       <section className="px-5 py-14">
@@ -61,64 +60,72 @@ export function GallerySection({ section, media }: { section: Section; media: Me
   const catNames = Object.keys(categories)
   const catItems = openCategory ? categories[openCategory] || [] : []
 
-  // Viewer items
-  const viewerItems: GalleryItem[] = catItems.map((it) => ({
-    url: it.url,
-    type: it.type === "video" ? "video" : "photo",
-    caption: it.caption,
-    description: it.description,
-    thumb: it.thumb,
-  }))
+  const openViewer = (items: ItemT[], index: number, rect: DOMRect) => {
+    setViewerState({
+      items: items.map((it) => ({
+        url: it.url,
+        type: it.type === "video" ? "video" : "photo",
+        caption: it.caption,
+        description: it.description,
+        thumb: it.thumb,
+      })),
+      index,
+      rect,
+    })
+  }
 
   return (
     <section className="px-5 py-14 sm:py-20">
       <div className="mx-auto max-w-5xl">
         {section.title && <SectionTitle title={section.title} subtitle={section.subtitle ?? undefined} />}
 
-        {/* === CATEGORY GRID — only on gallery page === */}
         <AnimatePresence mode="wait">
+          {/* === CATEGORY FOLDER GRID === */}
           {!openCategory && (
             <motion.div
-              key="cat-grid"
+              key="folders"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4"
+              className="mt-10 grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-4 md:grid-cols-5"
             >
               {catNames.map((catName) => {
                 const catMedia = categories[catName]
                 const cover = catMedia[0]
                 const photoCount = catMedia.filter((i) => i.type === "photo").length
                 const videoCount = catMedia.filter((i) => i.type === "video").length
+                // iOS Photos style: 3x3 thumbnail grid inside each folder
+                const thumbs = catMedia.slice(0, 9)
                 return (
                   <button
                     key={catName}
                     onClick={() => setOpenCategory(catName)}
-                    className="group relative overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.2)] bg-ivory shadow-sm hover:shadow-lg transition-shadow aspect-square"
+                    className="group block w-full text-center"
                   >
-                    {cover && (
-                      <img
-                        src={cover.thumb || cover.url}
-                        alt={catName}
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                    <div className="absolute bottom-0 inset-x-0 p-3 text-right">
-                      <h3 className="text-white font-display text-base sm:text-lg text-balance">{catName}</h3>
-                      <div className="flex items-center gap-2 mt-1 justify-end">
-                        {photoCount > 0 && (
-                          <span className="flex items-center gap-1 text-white/80 text-[10px]">
-                            <ImageIcon className="h-3 w-3" /> {toPersianDigits(photoCount)}
-                          </span>
-                        )}
-                        {videoCount > 0 && (
-                          <span className="flex items-center gap-1 text-white/80 text-[10px]">
-                            <Film className="h-3 w-3" /> {toPersianDigits(videoCount)}
-                          </span>
-                        )}
+                    {/* Folder tile with 3x3 grid */}
+                    <div className="relative aspect-square overflow-hidden rounded-[22%] border border-[oklch(0.76_0.14_80/0.15)] bg-ivory p-[5%] shadow-sm transition-all duration-200 group-hover:scale-105 group-active:scale-95">
+                      <div className="grid h-full w-full grid-cols-3 grid-rows-3 gap-[4%]">
+                        {thumbs.map((img, i) => (
+                          <div key={i} className="overflow-hidden rounded-[18%]">
+                            {img.type === "video" ? (
+                              <video src={img.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                            ) : (
+                              <img src={img.thumb || img.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                            )}
+                          </div>
+                        ))}
+                        {/* Fill empty slots */}
+                        {Array.from({ length: 9 - thumbs.length }).map((_, i) => (
+                          <div key={`empty-${i}`} className="rounded-[18%] bg-[oklch(0.95_0.018_82)]" />
+                        ))}
                       </div>
+                    </div>
+                    {/* Name + count */}
+                    <div className="mt-2 text-[13px] font-semibold text-foreground sm:text-sm">{catName}</div>
+                    <div className="mt-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
+                      {photoCount > 0 && `${toPersianDigits(photoCount)} عکس`}
+                      {photoCount > 0 && videoCount > 0 && " · "}
+                      {videoCount > 0 && `${toPersianDigits(videoCount)} ویدیو`}
                     </div>
                   </button>
                 )
@@ -126,26 +133,27 @@ export function GallerySection({ section, media }: { section: Section; media: Me
             </motion.div>
           )}
 
-          {/* === EXPANDED CATEGORY — normal page, scrolls naturally === */}
+          {/* === EXPANDED CATEGORY — normal scrollable page === */}
           {openCategory && (
             <CategoryView
               key={openCategory}
               categoryName={openCategory}
               items={catItems}
               onBack={() => setOpenCategory(null)}
-              onOpenItem={(i) => setViewerIndex(i)}
+              onOpenItem={openViewer}
             />
           )}
         </AnimatePresence>
       </div>
 
-      {/* === IMAGE VIEWER === */}
+      {/* === IMAGE VIEWER — opens from clicked position === */}
       <AnimatePresence>
-        {viewerIndex !== null && viewerItems.length > 0 && (
+        {viewerState && (
           <ImageViewer
-            items={viewerItems}
-            startIndex={viewerIndex}
-            onClose={() => setViewerIndex(null)}
+            items={viewerState.items}
+            startIndex={viewerState.index}
+            originRect={viewerState.rect}
+            onClose={() => setViewerState(null)}
           />
         )}
       </AnimatePresence>
@@ -153,7 +161,7 @@ export function GallerySection({ section, media }: { section: Section; media: Me
   )
 }
 
-// ===== Category expanded view — normal page that scrolls =====
+// ===== Category expanded view =====
 function CategoryView({
   categoryName,
   items,
@@ -163,7 +171,7 @@ function CategoryView({
   categoryName: string
   items: ItemT[]
   onBack: () => void
-  onOpenItem: (i: number) => void
+  onOpenItem: (items: ItemT[], index: number, rect: DOMRect) => void
 }) {
   const [filter, setFilter] = useState<"all" | "photo" | "video">("all")
 
@@ -209,15 +217,15 @@ function CategoryView({
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
         {filtered.map((item, i) => {
           const realIndex = items.indexOf(item)
-          return <LazyItem key={item.url + i} item={item} onClick={() => onOpenItem(realIndex)} />
+          return <LazyItem key={item.url + i} item={item} onClick={(rect) => onOpenItem(items, realIndex, rect)} />
         })}
       </div>
     </motion.div>
   )
 }
 
-// ===== Lazy item with IntersectionObserver =====
-function LazyItem({ item, onClick }: { item: ItemT; onClick: () => void }) {
+// ===== Lazy item =====
+function LazyItem({ item, onClick }: { item: ItemT; onClick: (rect: DOMRect) => void }) {
   const [inView, setInView] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const ref = useRef<HTMLButtonElement>(null)
@@ -226,10 +234,7 @@ function LazyItem({ item, onClick }: { item: ItemT; onClick: () => void }) {
     if (!ref.current) return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true)
-          observer.disconnect()
-        }
+        if (entry.isIntersecting) { setInView(true); observer.disconnect() }
       },
       { rootMargin: "200px" }
     )
@@ -237,10 +242,16 @@ function LazyItem({ item, onClick }: { item: ItemT; onClick: () => void }) {
     return () => observer.disconnect()
   }, [])
 
+  const handleClick = () => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    onClick(rect)
+  }
+
   return (
     <button
       ref={ref}
-      onClick={onClick}
+      onClick={handleClick}
       className="group relative overflow-hidden rounded-xl border border-[oklch(0.76_0.14_80/0.15)] bg-ivory shadow-sm hover:shadow-md transition-shadow aspect-square"
     >
       {!inView && (

@@ -308,3 +308,44 @@ Stage Summary:
 - Body scroll locked when viewer open — site doesn't move
 - Swipe only works on viewer media, not site
 - Simple video player (timeline + stop)
+
+---
+Task ID: round-11
+Agent: main (z.ai code)
+Task: Rebuild gallery from scratch — iOS Photos folder cards, FLIP image viewer, remove floating ornaments, no swipe
+
+Work Log:
+- Removed AnimatedOrnaments (floating crescent, star, rings) from memorial-app — 0 floating shapes on page
+- Removed ScrollProgress bar too
+- Built new image-viewer.tsx from scratch:
+  - FLIP animation: captures clicked element's getBoundingClientRect(), animates image from that position to center of viewport
+  - Works correctly regardless of scroll position (fixed positioning + viewport-relative rect)
+  - Dark blurred background (rgba(20,16,30,0.75) + blur(20px))
+  - Image at natural size (max 45vh height) — NOT fullscreen
+  - Caption in solid white box below image
+  - Download button (solid emerald) always visible below caption
+  - Close button (solid emerald circle) top-right
+  - Prev/next arrows (solid white circles) on sides
+  - Simple video player: timeline bar + play/pause + time display
+  - NO swipe — only arrow buttons + keyboard
+  - Body scroll locked when open
+- Built new gallery-section.tsx from scratch:
+  - iOS Photos style folder cards: 3x3 thumbnail grid inside each square card
+  - Category name + photo/video count below each folder
+  - Click folder → expanded category view (normal page scroll, NOT overflow hidden)
+  - Grid of items with lazy loading (IntersectionObserver)
+  - Click item → captures rect, opens ImageViewer with FLIP animation
+  - Filter tabs (all/photo/video)
+  - Back button
+  - line-clamp-2 for captions
+- Updated VideoSection to capture button rect and pass to ImageViewer
+
+Stage Summary:
+- Gallery rebuilt from scratch (iOS Photos style folder cards with 3x3 grids)
+- Image viewer uses FLIP animation — opens from clicked position, NOT floating at top
+- NO swipe anywhere
+- NO floating ornaments on any page
+- Background blurred (dark, not cream)
+- Download button always visible
+- 0 lint errors, 0 console errors
+- VLM: 8-9/10

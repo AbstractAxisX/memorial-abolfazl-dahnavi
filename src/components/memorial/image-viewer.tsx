@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { motion, AnimatePresence, PanInfo } from "framer-motion"
-import { X, ChevronLeft, ChevronRight, Download, Play, Pause } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { X, Download, Play, Pause } from "lucide-react"
 import { toPersianDigits } from "./biography-view"
 
-export type GalleryItem = {
+export type ViewerItem = {
   url: string
   type: "photo" | "video"
   caption?: string | null
@@ -23,15 +23,15 @@ function fmtTime(s: number): string {
 export function ImageViewer({
   items,
   startIndex,
+  originRect,
   onClose,
 }: {
-  items: GalleryItem[]
+  items: ViewerItem[]
   startIndex: number
+  originRect: DOMRect
   onClose: () => void
 }) {
   const [index, setIndex] = useState(startIndex)
-  const [direction, setDirection] = useState(0)
-  const [loaded, setLoaded] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -40,46 +40,13 @@ export function ImageViewer({
 
   const item = items[index]
 
-  const goNext = useCallback(() => {
-    if (index < items.length - 1) {
-      setDirection(1)
-      setIndex((i) => i + 1)
-      setLoaded(false)
-      setPlaying(false)
-    }
-  }, [index, items.length])
-
-  const goPrev = useCallback(() => {
-    if (index > 0) {
-      setDirection(-1)
-      setIndex((i) => i - 1)
-      setLoaded(false)
-      setPlaying(false)
-    }
-  }, [index])
-
-  // Lock body scroll while viewer is open — site won't move
-  useEffect(() => {
-    const original = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => { document.body.style.overflow = original }
-  }, [])
-
-  // keyboard — only affects modal
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-      else if (e.key === "ArrowLeft") goPrev()
-      else if (e.key === "ArrowRight") goNext()
-      else if (e.key === " " && item.type === "video") {
-        e.preventDefault()
-        togglePlay()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onClose, goNext, goPrev, index, item.type])
+  // Calculate target position (centered in viewport)
+  const vw = typeof window !== "undefined" ? window.innerWidth : 390
+  const vh = typeof window !== "undefined" ? window.innerHeight : 844
+  const targetW = Math.min(vw * 0.85, 420)
+  const targetH = Math.min(vh * 0.45, 400)
+  const targetLeft = (vw - targetW) / 2
+  const targetTop = Math.max(60, (vh - targetH - 140) / 2)
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current
@@ -111,13 +78,32 @@ export function ImageViewer({
     }
   }, [item])
 
-  // Video events
+  // keyboard
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      else if (e.key === "ArrowLeft" && index > 0) setIndex(index - 1)
+      else if (e.key === "ArrowRight" && index < items.length - 1) setIndex(index + 1)
+      else if (e.key === " " && item.type === "video") { e.preventDefault(); togglePlay() }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose, index, items.length, item.type, togglePlay])
+
+  // lock body scroll
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  // video events
   useEffect(() => {
     if (item.type !== "video") return
     const v = videoRef.current
     if (!v) return
     const onTime = () => { setCurrent(v.currentTime); if (v.duration) setProgress(v.currentTime / v.duration) }
-    const onMeta = () => { setDuration(v.duration || 0) }
+    const onMeta = () => setDuration(v.duration || 0)
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
     v.addEventListener("timeupdate", onTime)
@@ -132,29 +118,20 @@ export function ImageViewer({
     }
   }, [index, item.type])
 
-  // Drag/swipe — only on the media element, NOT the whole page
-  const onDragEnd = (_e: unknown, info: PanInfo) => {
-    if (info.offset.x > 80) goPrev()
-    else if (info.offset.x < -80) goNext()
-  }
-
-  const slideVariants = {
-    enter: (dir: number) => ({ x: dir > 0 ? "60%" : "-60%", opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? "-60%" : "60%", opacity: 0 }),
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100]"
       style={{
-        backgroundColor: "rgba(245, 242, 235, 0.85)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
+        backgroundColor: "rgba(20, 16, 30, 0.75)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
       onClick={onClose}
     >
-      {/* Close button — solid, not glass */}
+      {/* Close button */}
       <button
         onClick={(e) => { e.stopPropagation(); onClose() }}
         className="absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-[oklch(0.39_0.085_168)] text-white shadow-md hover:bg-[oklch(0.33_0.08_170)] transition"
@@ -169,106 +146,118 @@ export function ImageViewer({
         {toPersianDigits(index + 1)} / {toPersianDigits(items.length)}
       </div>
 
-      {/* Prev arrow */}
+      {/* Prev/Next arrows */}
       {index > 0 && (
         <button
-          onClick={(e) => { e.stopPropagation(); goPrev() }}
-          className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[oklch(0.39_0.085_168)] shadow-md hover:bg-[oklch(0.95_0.018_82)] transition"
+          onClick={(e) => { e.stopPropagation(); setIndex(index - 1) }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[oklch(0.39_0.085_168)] shadow-md hover:bg-[oklch(0.95_0.018_82)] transition"
           aria-label="قبلی"
         >
-          <ChevronRight className="h-5 w-5" />
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 6l-6 6 6 6" /></svg>
         </button>
       )}
-
-      {/* Next arrow */}
       {index < items.length - 1 && (
         <button
-          onClick={(e) => { e.stopPropagation(); goNext() }}
-          className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[oklch(0.39_0.085_168)] shadow-md hover:bg-[oklch(0.95_0.018_82)] transition"
+          onClick={(e) => { e.stopPropagation(); setIndex(index + 1) }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white text-[oklch(0.39_0.085_168)] shadow-md hover:bg-[oklch(0.95_0.018_82)] transition"
           aria-label="بعدی"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
         </button>
       )}
 
-      {/* Media — draggable area, stops page from scrolling */}
-      <div
-        className="relative flex flex-col items-center max-w-full px-4"
+      {/* The media — animates from clicked position to center */}
+      <motion.div
+        initial={{
+          position: "fixed",
+          left: originRect.left,
+          top: originRect.top,
+          width: originRect.width,
+          height: originRect.height,
+          borderRadius: 12,
+        }}
+        animate={{
+          left: targetLeft,
+          top: targetTop,
+          width: targetW,
+          height: targetH,
+          borderRadius: 20,
+        }}
+        exit={{
+          left: originRect.left,
+          top: originRect.top,
+          width: originRect.width,
+          height: originRect.height,
+          borderRadius: 12,
+        }}
+        transition={{ type: "spring", stiffness: 350, damping: 35 }}
+        className="fixed z-10 shadow-2xl overflow-hidden bg-black"
         onClick={(e) => e.stopPropagation()}
       >
-        <AnimatePresence custom={direction} mode="popLayout" initial={false}>
-          <motion.div
-            key={index}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.5}
-            onDragEnd={onDragEnd}
-            className="flex flex-col items-center cursor-grab active:cursor-grabbing"
-          >
-            {/* The media */}
-            <div className="relative flex items-center justify-center">
-              {item.type === "video" ? (
-                <div className="flex flex-col items-center">
-                  <video
-                    ref={videoRef}
-                    src={item.url}
-                    poster={item.thumb || undefined}
-                    playsInline
-                    onClick={togglePlay}
-                    className="max-h-[65vh] max-w-[90vw] rounded-xl bg-black shadow-xl"
-                  />
-                  {!playing && (
-                    <button onClick={togglePlay} className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-[oklch(0.39_0.085_168)] text-white shadow-lg">
-                      <Play className="h-8 w-8 mr-1" fill="currentColor" />
-                    </button>
-                  )}
-                  {/* Timeline */}
-                  <div className="mt-3 flex items-center gap-2 w-full max-w-md">
-                    <button onClick={togglePlay} className="text-[oklch(0.39_0.085_168)] shrink-0">
-                      {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </button>
-                    <span className="text-[10px] text-[oklch(0.39_0.085_168)] tabular-nums shrink-0" dir="ltr">{fmtTime(current)}</span>
-                    <div onClick={seek} className="relative h-1.5 flex-1 rounded-full bg-[oklch(0.9_0.01_85)] cursor-pointer">
-                      <div className="absolute inset-y-0 right-0 rounded-full bg-[oklch(0.39_0.085_168)]" style={{ width: `${progress * 100}%` }} />
-                    </div>
-                    <span className="text-[10px] text-[oklch(0.39_0.085_168)] tabular-nums shrink-0" dir="ltr">{fmtTime(duration)}</span>
-                  </div>
-                </div>
-              ) : (
-                <img
-                  src={item.thumb || item.url}
-                  alt={item.caption ?? ""}
-                  onLoad={() => setLoaded(true)}
-                  className="max-h-[65vh] max-w-[90vw] rounded-xl shadow-xl object-contain"
-                />
-              )}
-            </div>
-
-            {/* Caption box */}
-            {(item.caption || item.description) && (
-              <div className="mt-4 w-full max-w-md rounded-xl bg-white border border-[oklch(0.76_0.14_80/0.15)] p-4 shadow-sm">
-                {item.caption && <p className="text-sm font-medium text-[oklch(0.39_0.085_168)] text-center mb-1">{item.caption}</p>}
-                {item.description && <p className="text-xs text-muted-foreground text-center leading-5">{item.description}</p>}
-              </div>
+        {item.type === "video" ? (
+          <div className="flex h-full w-full flex-col">
+            <video
+              ref={videoRef}
+              src={item.url}
+              poster={item.thumb || undefined}
+              playsInline
+              onClick={togglePlay}
+              className="flex-1 w-full object-contain"
+            />
+            {!playing && (
+              <button onClick={togglePlay} className="absolute inset-0 m-auto flex h-16 w-16 items-center justify-center rounded-full bg-[oklch(0.39_0.085_168)] text-white shadow-lg">
+                <Play className="h-8 w-8 mr-1" fill="currentColor" />
+              </button>
             )}
+            {/* Timeline */}
+            <div className="flex items-center gap-2 bg-black/80 px-3 py-2">
+              <button onClick={togglePlay} className="text-white shrink-0">
+                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </button>
+              <span className="text-[10px] text-white tabular-nums shrink-0" dir="ltr">{fmtTime(current)}</span>
+              <div onClick={seek} className="relative h-1.5 flex-1 rounded-full bg-white/20 cursor-pointer">
+                <div className="absolute inset-y-0 right-0 rounded-full bg-[oklch(0.76_0.14_80)]" style={{ width: `${progress * 100}%` }} />
+              </div>
+              <span className="text-[10px] text-white tabular-nums shrink-0" dir="ltr">{fmtTime(duration)}</span>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={item.thumb || item.url}
+            alt={item.caption ?? ""}
+            className="h-full w-full object-contain"
+          />
+        )}
+      </motion.div>
 
-            {/* Download button — solid */}
-            <button
-              onClick={download}
-              className="mt-3 inline-flex items-center gap-2 rounded-full bg-[oklch(0.39_0.085_168)] px-5 py-2 text-sm text-white shadow-md hover:bg-[oklch(0.33_0.08_170)] transition active:scale-95"
-            >
-              <Download className="h-4 w-4" />
-              دانلود
-            </button>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
+      {/* Caption + download — below the image */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ delay: 0.15 }}
+        className="fixed z-20"
+        style={{
+          left: targetLeft,
+          top: targetTop + targetH + 12,
+          width: targetW,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {(item.caption || item.description) && (
+          <div className="rounded-xl bg-white border border-[oklch(0.76_0.14_80/0.15)] p-3 shadow-sm mb-2">
+            {item.caption && <p className="text-sm font-medium text-[oklch(0.39_0.085_168)] text-center mb-0.5">{item.caption}</p>}
+            {item.description && <p className="text-xs text-muted-foreground text-center leading-5">{item.description}</p>}
+          </div>
+        )}
+        <button
+          onClick={download}
+          className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[oklch(0.39_0.085_168)] px-5 py-2 text-sm text-white shadow-md hover:bg-[oklch(0.33_0.08_170)] transition active:scale-95"
+        >
+          <Download className="h-4 w-4" />
+          دانلود
+        </button>
+      </motion.div>
+    </motion.div>
   )
 }
