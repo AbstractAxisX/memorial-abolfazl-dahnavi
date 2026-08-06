@@ -212,7 +212,11 @@ function TextSection({ section }: { section: Section }) {
 
 // ============ IMAGE ============
 function ImageSection({ section }: { section: Section }) {
-  const cfg = parseConfig<{ url: string | null; caption: string; alt: string; size: string; align: string; description?: string }>(section, { url: null, caption: "", alt: "", size: "md", align: "center" })
+  const cfg = parseConfig<{
+    url: string | null; caption: string; alt: string; description?: string
+    position: string; size: string; radius: string; border: string; shadow: string
+  }>(section, { url: null, caption: "", alt: "", position: "center", size: "natural", radius: "md", border: "none", shadow: "sm" })
+
   if (!cfg.url) {
     return (
       <section className="px-5 py-14">
@@ -220,27 +224,142 @@ function ImageSection({ section }: { section: Section }) {
       </section>
     )
   }
-  const sizeW = { sm: "max-w-xs", md: "max-w-md", lg: "max-w-2xl", full: "max-w-4xl" }[cfg.size] || "max-w-md"
-  const align = { center: "mx-auto", left: "mr-auto", right: "ml-auto" }[cfg.align] || "mx-auto"
+
+  // Size mapping
+  const sizeMap: Record<string, string> = {
+    natural: "max-w-full",
+    xs: "w-20",
+    sm: "w-30",
+    md: "w-50",
+    lg: "w-80",
+    full: "w-full",
+  }
+  const sizeCls = sizeMap[cfg.size] || sizeMap.natural
+  const isFixedSize = cfg.size !== "natural" && cfg.size !== "full"
+
+  // Radius mapping
+  const radiusMap: Record<string, string> = {
+    none: "rounded-none",
+    sm: "rounded-md",
+    md: "rounded-xl",
+    lg: "rounded-2xl",
+    full: "rounded-full",
+  }
+  const radiusCls = radiusMap[cfg.radius] || radiusMap.md
+
+  // Border mapping
+  const borderMap: Record<string, string> = {
+    none: "",
+    thin: "border border-[oklch(0.76_0.14_80/0.2)]",
+    medium: "border-2 border-[oklch(0.76_0.14_80/0.35)]",
+    thick: "border-4 border-[oklch(0.76_0.14_80/0.5)]",
+  }
+  const borderCls = borderMap[cfg.border] || borderMap.none
+
+  // Shadow mapping
+  const shadowMap: Record<string, string> = {
+    none: "",
+    sm: "shadow-sm",
+    md: "shadow-md",
+    lg: "shadow-xl",
+  }
+  const shadowCls = shadowMap[cfg.shadow] || shadowMap.sm
+
+  const imgEl = (
+    <img
+      src={cfg.url}
+      alt={cfg.alt || cfg.caption || section.title || ""}
+      className={`object-cover transition-transform duration-700 hover:scale-105 ${radiusCls} ${borderCls} ${shadowCls} ${isFixedSize ? "h-auto" : "w-full"}`}
+      style={isFixedSize ? { width: cfg.size === "xs" ? 80 : cfg.size === "sm" ? 120 : cfg.size === "md" ? 200 : cfg.size === "lg" ? 320 : undefined } : undefined}
+      loading="lazy"
+    />
+  )
+
+  const captionEl = (cfg.caption || cfg.description) && (
+    <div className="mt-2">
+      {cfg.caption && <p className="text-sm font-medium text-[oklch(0.39_0.085_168)]">{cfg.caption}</p>}
+      {cfg.description && <p className="mt-0.5 text-xs text-muted-foreground leading-5">{cfg.description}</p>}
+    </div>
+  )
+
+  const position = cfg.position || "center"
+
+  // Float layout (right/left) — image is a block, text wraps around it
+  if (position === "right" || position === "left") {
+    const floatSide = position === "right" ? "float-right ml-4 mb-2" : "float-left mr-4 mb-2"
+    return (
+      <section className="px-5 py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          <div>
+            <div className={`${floatSide} ${isFixedSize ? "" : "max-w-xs"}`}>
+              {imgEl}
+              {captionEl}
+            </div>
+            {/* Text content flows around the image */}
+            <div className="leading-9 text-[15px] sm:text-base text-foreground/85 text-justify">
+              {section.subtitle || section.title || ""}
+            </div>
+            <div className="clear-both" />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  // Top — full width above text
+  if (position === "top") {
+    return (
+      <section className="px-5 py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mb-4">
+            {imgEl}
+            {captionEl}
+          </motion.div>
+          {(section.subtitle || section.title) && (
+            <div className="leading-9 text-[15px] sm:text-base text-foreground/85 text-justify">
+              {section.subtitle || section.title || ""}
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
+
+  // Bottom — full width below text
+  if (position === "bottom") {
+    return (
+      <section className="px-5 py-8 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          {(section.subtitle || section.title) && (
+            <div className="mb-4 leading-9 text-[15px] sm:text-base text-foreground/85 text-justify">
+              {section.subtitle || section.title || ""}
+            </div>
+          )}
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
+            {imgEl}
+            {captionEl}
+          </motion.div>
+        </div>
+      </section>
+    )
+  }
+
+  // Center (default) — image centered above any text
   return (
     <section className="px-5 py-14 sm:py-20">
-      <motion.figure
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-60px" }}
-        transition={{ duration: 0.7 }}
-        className={`${sizeW} ${align}`}
-      >
-        <div className="overflow-hidden rounded-2xl border border-[oklch(0.74_0.135_82/0.25)] shadow-lg shadow-[oklch(0.36_0.07_168/0.12)]">
-          <img src={cfg.url} alt={cfg.alt || cfg.caption || section.title || ""} className="w-full object-cover transition-transform duration-700 hover:scale-105" />
-        </div>
-        {(cfg.caption || cfg.description) && (
-          <figcaption className="mt-3 text-center">
-            {cfg.caption && <p className="text-sm font-medium text-[oklch(0.36_0.07_168)]">{cfg.caption}</p>}
-            {cfg.description && <p className="mt-1 text-xs text-muted-foreground leading-6">{cfg.description}</p>}
-          </figcaption>
-        )}
-      </motion.figure>
+      <div className="mx-auto max-w-3xl flex flex-col items-center">
+        <motion.figure
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.7 }}
+          className={isFixedSize ? "" : "w-full max-w-2xl"}
+          style={isFixedSize ? { width: cfg.size === "xs" ? 80 : cfg.size === "sm" ? 120 : cfg.size === "md" ? 200 : cfg.size === "lg" ? 320 : undefined } : undefined}
+        >
+          {imgEl}
+          {captionEl}
+        </motion.figure>
+      </div>
     </section>
   )
 }

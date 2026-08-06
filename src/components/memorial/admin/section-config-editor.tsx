@@ -108,10 +108,64 @@ function ImageEditor({ c, up }: { c: Record<string, unknown>; up: (p: Record<str
         <Field label="متن جایگزین (alt)"><Input value={(c.alt as string) || ""} onChange={(e) => up({ alt: e.target.value })} /></Field>
       </div>
       <Field label="توضیح (زیر کپشن)"><Textarea value={(c.description as string) || ""} onChange={(e) => up({ description: e.target.value })} rows={2} /></Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="اندازه"><Select value={(c.size as string) || "md"} onChange={(e) => up({ size: e.target.value })}><option value="sm">کوچک</option><option value="md">متوسط</option><option value="lg">بزرگ</option><option value="full">تمام‌عرض</option></Select></Field>
-        <Field label="تراز"><Select value={(c.align as string) || "center"} onChange={(e) => up({ align: e.target.value })}><option value="center">مرکز</option><option value="left">چپ</option><option value="right">راست</option></Select></Field>
-      </div>
+
+      {/* Position: where image sits relative to text */}
+      <Field label="محل نمایش نسبت به متن">
+        <Select value={(c.position as string) || "center"} onChange={(e) => up({ position: e.target.value })}>
+          <option value="center">مرکز (بالای متن)</option>
+          <option value="right">راست کنار متن (متن از کنار می‌چینه)</option>
+          <option value="left">چپ کنار متن (متن از کنار می‌چینه)</option>
+          <option value="top">بالای متن (تمام عرض)</option>
+          <option value="bottom">پایین متن (تمام عرض)</option>
+        </Select>
+      </Field>
+
+      {/* Size: how big the image displays */}
+      <Field label="سایز نمایش">
+        <Select value={(c.size as string) || "natural"} onChange={(e) => up({ size: e.target.value })}>
+          <option value="natural">طبیعی (سایز واقعی عکس)</option>
+          <option value="xs">خیلی کوچک (۸۰px)</option>
+          <option value="sm">کوچک (۱۲۰px)</option>
+          <option value="md">متوسط (۲۰۰px)</option>
+          <option value="lg">بزرگ (۳۲۰px)</option>
+          <option value="full">تمام عرض</option>
+        </Select>
+      </Field>
+
+      {/* Border radius */}
+      <Field label="گوشه تصویر">
+        <Select value={(c.radius as string) || "md"} onChange={(e) => up({ radius: e.target.value })}>
+          <option value="none">تیز (بدون گردی)</option>
+          <option value="sm">کمی گرد</option>
+          <option value="md">گرد متوسط</option>
+          <option value="lg">گرد زیاد</option>
+          <option value="full">دایره</option>
+        </Select>
+      </Field>
+
+      {/* Border */}
+      <Field label="حاشیه">
+        <Select value={(c.border as string) || "none"} onChange={(e) => up({ border: e.target.value })}>
+          <option value="none">بدون حاشیه</option>
+          <option value="thin">حاشیه نازک</option>
+          <option value="medium">حاشیه متوسط</option>
+          <option value="thick">حاشیه ضخیم</option>
+        </Select>
+      </Field>
+
+      {/* Shadow */}
+      <Field label="سایه">
+        <Select value={(c.shadow as string) || "sm"} onChange={(e) => up({ shadow: e.target.value })}>
+          <option value="none">بدون سایه</option>
+          <option value="sm">سایه ملایم</option>
+          <option value="md">سایه متوسط</option>
+          <option value="lg">سایه زیاد</option>
+        </Select>
+      </Field>
+
+      <p className="text-[11px] text-muted-foreground leading-5">
+        وقتی محل نمایش «راست» یا «چپ» کنار متن باشه، عکس بصورت بلوک (float) قرار می‌گیره و متن از کنارش می‌چینه و پایین می‌ره. سایز هم قابل تنظیمه.
+      </p>
     </div>
   )
 }

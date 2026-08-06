@@ -443,3 +443,38 @@ Stage Summary:
 - Video seek fixed for RTL (left = end, right = beginning)
 - URL routing added (#biography, #gallery, #blog/postId)
 - 0 lint errors, 0 console errors
+
+---
+Task ID: round-15
+Agent: main (z.ai code)
+Task: Rebuild ImageSection with float layout, size control, border radius, border, shadow, position options
+
+Work Log:
+- Updated SectionConfigEditor ImageEditor with new options:
+  - position: center, right (float), left (float), top, bottom
+  - size: natural (actual size), xs (80px), sm (120px), md (200px), lg (320px), full
+  - radius: none (sharp), sm, md, lg, full (circle)
+  - border: none, thin, medium, thick
+  - shadow: none, sm, md, lg
+- Rebuilt ImageSection in section-renderers.tsx from scratch:
+  - Float layout: when position=right or left, image uses CSS float, text wraps around it
+  - Fixed overflow-hidden on grandparent container that was blocking float
+  - Size applied via inline style width for fixed sizes, w-full for natural/full
+  - Border radius applied directly on img element
+  - Border applied directly on img element
+  - Shadow applied directly on img element
+  - Caption below image (not blocking text flow)
+  - Text content (from section.subtitle) flows around image
+  - clear-both at end to clear float
+- QC tested: created image section with position=right, size=sm (120px), radius=md, border=thin, shadow=sm
+  - VLM: 10/10 — "تصویر کوچک سمت راست، متن از کنار می‌چینه، float right به درستی اعمال شده"
+  - float=right confirmed via getComputedStyle
+  - Image width=120px confirmed
+  - Text wraps around image confirmed
+
+Stage Summary:
+- Image section rebuilt with WordPress-style float layout
+- 5 position options, 6 size options, 5 radius options, 4 border options, 4 shadow options
+- Text flows around image when positioned left/right
+- VLM: 10/10
+- 0 lint errors
