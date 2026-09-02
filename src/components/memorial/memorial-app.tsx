@@ -24,7 +24,12 @@ export type View =
  */
 export function MemorialApp({ initialData, view }: { initialData: SiteData; view: View }) {
   hydrateStore(initialData)
-  const data = useMemorial((s) => s.data)
+  // SSR + first client render MUST use initialData directly:
+  // zustand's server snapshot returns the store's *initial* state (data: null),
+  // which rendered a bare loading-spinner as the whole SSR HTML. Falling back to
+  // the prop means the full site is server-rendered (works even with JS disabled)
+  // and hydration matches 1:1 (no mismatch, no blank flash, no missing nav).
+  const data = useMemorial((s) => s.data) ?? initialData
   const load = useMemorial((s) => s.load)
   const router = useRouter()
 

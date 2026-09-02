@@ -12,6 +12,11 @@ import { DEFAULT_ADMIN_PASSWORD, DEFAULT_SETTING_CREATE } from "./default-settin
  * when it doesn't.
  */
 export async function ensureSettingRow() {
+  // Read-first: no write on the hot path (an unconditional upsert would write
+  // to SQLite on EVERY page view — slow, and it dirties db/custom.db so a
+  // `git pull` on the user's machine would conflict).
+  const existing = await db.siteSetting.findUnique({ where: { id: "main" } })
+  if (existing) return existing
   return db.siteSetting.upsert({
     where: { id: "main" },
     update: {},

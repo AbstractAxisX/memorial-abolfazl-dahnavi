@@ -36,15 +36,19 @@ function tokenFor(passwordHash: string): string {
 
 export async function login(password: string): Promise<boolean> {
   // Auto-seed the setting row if it's missing (fresh/wiped database) so a
-  // fresh install can always log in with the default password.
-  const setting = await db.siteSetting.upsert({
-    where: { id: "main" },
-    update: {},
-    create: {
-      ...DEFAULT_SETTING_CREATE,
-      adminPasswordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
-    },
-  })
+  // fresh install can always log in with the default password. Read-first —
+  // no write when the row already exists.
+  const existing = await db.siteSetting.findUnique({ where: { id: "main" } })
+  const setting =
+    existing ??
+    (await db.siteSetting.upsert({
+      where: { id: "main" },
+      update: {},
+      create: {
+        ...DEFAULT_SETTING_CREATE,
+        adminPasswordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
+      },
+    }))
 
   let passwordHash = setting.adminPasswordHash ?? ""
   let ok = false
