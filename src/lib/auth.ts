@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto"
 import { cookies } from "next/headers"
 import { db } from "./db"
+import { DEFAULT_ADMIN_PASSWORD, DEFAULT_SETTING_CREATE } from "./default-setting"
 
 const SECRET = process.env.ADMIN_SECRET || "memorial-abolfazl-dahnavi-2026-secret"
 const COOKIE_NAME = "memorial_admin"
@@ -34,8 +35,16 @@ function tokenFor(passwordHash: string): string {
 }
 
 export async function login(password: string): Promise<boolean> {
-  const setting = await db.siteSetting.findUnique({ where: { id: "main" } })
-  if (!setting) return false
+  // Auto-seed the setting row if it's missing (fresh/wiped database) so a
+  // fresh install can always log in with the default password.
+  const setting = await db.siteSetting.upsert({
+    where: { id: "main" },
+    update: {},
+    create: {
+      ...DEFAULT_SETTING_CREATE,
+      adminPasswordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
+    },
+  })
 
   let passwordHash = setting.adminPasswordHash ?? ""
   let ok = false

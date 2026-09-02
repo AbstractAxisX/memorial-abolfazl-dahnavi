@@ -1,6 +1,26 @@
 import { db } from "./db"
 import type { SiteData, SiteSetting } from "./types"
 import { hashPassword } from "./auth"
+import { DEFAULT_ADMIN_PASSWORD, DEFAULT_SETTING_CREATE } from "./default-setting"
+
+/**
+ * Guarantees the `siteSetting` row exists. A fresh/wiped database (e.g. after
+ * `prisma db push`) has tables but no row — previously the whole site crashed
+ * with `Cannot read properties of null (reading 'globalFontKey')`. This runs
+ * on every fetchSiteData() call: upsert with an empty update is a no-op when
+ * the row exists, and creates the default row (with a working admin password)
+ * when it doesn't.
+ */
+export async function ensureSettingRow() {
+  return db.siteSetting.upsert({
+    where: { id: "main" },
+    update: {},
+    create: {
+      ...DEFAULT_SETTING_CREATE,
+      adminPasswordHash: hashPassword(DEFAULT_ADMIN_PASSWORD),
+    },
+  })
+}
 
 // Strips every sensitive field — safe to send to the browser.
 export function sanitizeSetting(s: {
@@ -16,7 +36,7 @@ export function sanitizeSetting(s: {
 // JSON round-trip normalizes Prisma Date objects into ISO strings.
 export async function fetchSiteData(): Promise<SiteData> {
   const [setting, pages, blogPosts, messages, fonts, media] = await Promise.all([
-    db.siteSetting.findUnique({ where: { id: "main" } }),
+    ensureSettingRow(),
     db.page.findMany({
       orderBy: { order: "asc" },
       include: { sections: { orderBy: { order: "asc" } } },

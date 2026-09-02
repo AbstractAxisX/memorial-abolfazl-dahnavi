@@ -7,6 +7,7 @@ import { Grid3x3, X } from "lucide-react"
 import { useMemorial, hydrateStore } from "@/lib/store"
 import { IconEl } from "@/lib/icon-registry"
 import { CustomFontInjector, fontFamilyFor } from "@/lib/fonts"
+import { DEFAULT_CLIENT_SETTING } from "@/lib/default-setting"
 import { PageRenderer, PageHeader } from "./page-renderer"
 import { MemorialFooter } from "./footer"
 import { BlogPostView } from "./blog-post-view"
@@ -61,7 +62,9 @@ export function MemorialApp({ initialData, view }: { initialData: SiteData; view
     )
   }
 
-  const setting = data.setting!
+  // Never crash on a missing settings row (fresh/wiped DB) — fall back to defaults.
+  // fetchSiteData() already auto-seeds the row server-side; this is the last line of defense.
+  const setting = data.setting ?? DEFAULT_CLIENT_SETTING
   const navPages = data.pages.filter((p) => p.showInNav).sort((a, b) => a.order - b.order)
   const homeSlug = data.pages.find((p) => p.isHome)?.slug ?? "home"
 
