@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Heart, CalendarDays, MapPin, ChevronLeft, ChevronRight, Quote as QuoteIcon,
@@ -94,7 +95,7 @@ function HeroSection({ section, setting, onNavigate }: { section: Section; setti
         {/* portrait */}
         <div className="relative h-60 w-60 sm:h-72 sm:w-72 rounded-full overflow-hidden border-4 border-white shadow-[0_20px_60px_-12px_oklch(0.36_0.07_168/0.6)] bg-ivory">
           {hasImage ? (
-            <img src={setting.heroImage!} alt={setting.displayTitle} className="h-full w-full object-cover animate-ken-burns" />
+            <Image src={setting.heroImage!} alt={setting.displayTitle} fill priority sizes="(min-width: 640px) 288px, 240px" className="object-cover animate-ken-burns" />
           ) : (
             <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-b from-[oklch(0.95_0.02_85)] to-[oklch(0.85_0.04_85)]">
               <img src="/decor/crescent.png" alt="نماد هلال احمر" className="h-28 w-28 object-contain opacity-90" />
@@ -470,7 +471,7 @@ function SliderSection({ section, media }: { section: Section; media: MediaFile[
               {items[idx].type === "video" ? (
                 <video src={items[idx].url} className="h-full w-full object-cover" controls muted autoPlay />
               ) : (
-                <img src={items[idx].url} alt={items[idx].caption ?? ""} loading="lazy" className="h-full w-full object-cover" />
+                <Image src={items[idx].thumb || items[idx].url} alt={items[idx].caption ?? ""} fill sizes="(max-width: 1024px) 100vw, 896px" className="object-cover" />
               )}
               {items[idx].caption && (
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 pb-16">
@@ -509,8 +510,7 @@ function SliderSection({ section, media }: { section: Section; media: MediaFile[
   )
 }
 
-// helper to avoid importing useEffect at top in a confusing way
-import { useEffect } from "react"
+// interval helper (useEffect is imported at the top)
 function useEffectInterval(fn: () => void | (() => void), deps: unknown[]) {
   useEffect(fn, deps)
 }
@@ -654,13 +654,15 @@ function GuestbookSection({ messages, onMessageAdded }: { messages: GuestMessage
   const [name, setName] = useState("")
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
+  // honeypot — hidden from humans, bots fill it and get rejected
+  const [honeypot, setHoneypot] = useState("")
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !text.trim()) { toast.error("نام و متن پیام را وارد کنید"); return }
     setSending(true)
     try {
-      const res = await fetch("/api/guestbook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), text: text.trim() }) })
-      if (!res.ok) throw new Error("ارسال ناموفق بود")
+      const res = await fetch("/api/guestbook", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), text: text.trim(), website: honeypot }) })
+      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error || "ارسال ناموفق بود") }
       toast.success("پیام شما ثبت شد")
       setName(""); setText("")
       await onMessageAdded()
@@ -672,8 +674,12 @@ function GuestbookSection({ messages, onMessageAdded }: { messages: GuestMessage
       <div className="mx-auto max-w-3xl">
         <SectionTitle title="کتاب یادبود" subtitle="اگر خاطره‌ای یا پیامی از قلب دارید، بنویسید" />
         <motion.form onSubmit={submit} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mt-10 parchment rounded-2xl border border-[oklch(0.74_0.135_82/0.2)] p-5 sm:p-6 shadow-sm">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="نام شما" maxLength={60} className="w-full rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-4 py-2.5 text-sm outline-none focus:border-[oklch(0.74_0.135_82)] focus:ring-2 focus:ring-[oklch(0.74_0.135_82/0.2)] transition" />
-          <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="پیام یادبود شما..." maxLength={800} rows={4} className="mt-3 w-full resize-none rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-4 py-3 text-sm leading-7 outline-none focus:border-[oklch(0.74_0.135_82)] focus:ring-2 focus:ring-[oklch(0.74_0.135_82/0.2)] transition" />
+          {/* honeypot anti-spam field */}
+          <input type="text" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" name="website" />
+          <label htmlFor="guestbook-name" className="sr-only">نام شما</label>
+          <input id="guestbook-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="نام شما" maxLength={60} className="w-full rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-4 py-2.5 text-sm outline-none focus:border-[oklch(0.74_0.135_82)] focus:ring-2 focus:ring-[oklch(0.74_0.135_82/0.2)] transition" />
+          <label htmlFor="guestbook-text" className="sr-only">پیام یادبود شما</label>
+          <textarea id="guestbook-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="پیام یادبود شما..." maxLength={800} rows={4} className="mt-3 w-full resize-none rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-4 py-3 text-sm leading-7 outline-none focus:border-[oklch(0.74_0.135_82)] focus:ring-2 focus:ring-[oklch(0.74_0.135_82/0.2)] transition" />
           <div className="mt-3 flex items-center justify-between gap-3">
             <span className="text-xs text-muted-foreground">{toPersianDigits(text.length)}/۸۰۰</span>
             <button type="submit" disabled={sending} className="inline-flex items-center gap-2 rounded-full bg-[oklch(0.36_0.07_168)] px-5 py-2.5 text-sm font-medium text-ivory shadow-md shadow-[oklch(0.36_0.07_168/0.3)] transition hover:bg-[oklch(0.3_0.07_170)] active:scale-95 disabled:opacity-60">
@@ -734,8 +740,8 @@ function BlogListSection({ section, blogPosts, onNavigatePost }: { section: Sect
               className={`group cursor-pointer overflow-hidden rounded-2xl border border-[oklch(0.74_0.135_82/0.2)] bg-ivory shadow-sm hover:shadow-xl transition-shadow ${p.featured ? "sm:col-span-2" : ""}`}
             >
               {p.coverImage && (
-                <div className={`overflow-hidden ${p.featured ? "h-56 sm:h-72" : "h-44"}`}>
-                  <img src={p.coverImage} alt={p.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <div className={`relative overflow-hidden ${p.featured ? "h-56 sm:h-72" : "h-44"}`}>
+                  <Image src={p.coverImage} alt={p.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px" className="object-cover transition-transform duration-700 group-hover:scale-105" />
                 </div>
               )}
               <div className="p-5">

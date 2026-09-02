@@ -1,94 +1,53 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronRight, Grid3x3, X } from "lucide-react"
-import { useMemorial } from "@/lib/store"
+import { Grid3x3, X } from "lucide-react"
+import { useMemorial, hydrateStore } from "@/lib/store"
 import { IconEl } from "@/lib/icon-registry"
 import { CustomFontInjector, fontFamilyFor } from "@/lib/fonts"
 import { PageRenderer, PageHeader } from "./page-renderer"
 import { MemorialFooter } from "./footer"
-import { AdminPanel } from "./admin/admin-panel"
+import { BlogPostView } from "./blog-post-view"
+import type { SiteData } from "@/lib/types"
 
-type View =
+export type View =
   | { kind: "page"; slug: string }
   | { kind: "blog"; postId: string }
 
-export function MemorialApp() {
-  const { data, loading, error, load } = useMemorial()
-  const [view, setView] = useState<View>({ kind: "page", slug: "home" })
-  const [adminOpen, setAdminOpen] = useState(false)
+/**
+ * Root shell of the memorial site.
+ * Receives server-rendered data (SSR for SEO) and the current view.
+ * Navigation uses real Next.js routes (/p/[slug], /blog/[id]) — soft, animated transitions.
+ */
+export function MemorialApp({ initialData, view }: { initialData: SiteData; view: View }) {
+  hydrateStore(initialData)
+  const data = useMemorial((s) => s.data)
+  const load = useMemorial((s) => s.load)
+  const router = useRouter()
 
+  // legacy hash URLs (#biography, #blog/<id>) → real routes (one-time redirect)
   useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    const check = () => {
-      if (window.location.hash === "#admin" || window.location.search.includes("admin=1")) {
-        setAdminOpen(true)
-      }
-    }
-    check()
-    window.addEventListener("hashchange", check)
-    return () => window.removeEventListener("hashchange", check)
-  }, [])
-
-  // URL routing — sync view with URL hash on load
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => {
-    if (!data) return
     const hash = window.location.hash.replace(/^#/, "")
-    if (hash === "admin" || hash.startsWith("admin")) return
+    if (!hash || hash.startsWith("admin")) return
+    const d = data ?? initialData
     if (hash.startsWith("blog/")) {
       const postId = hash.slice(5)
-      if (data.blogPosts.find((p) => p.id === postId)) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-        setView({ kind: "blog", postId })
-        return
+      if (d.blogPosts.find((p) => p.id === postId)) {
+        window.location.hash = ""
+        router.replace(`/blog/${postId}`)
       }
+      return
     }
-    if (hash && data.pages.find((p) => p.slug === hash)) {
-      setView({ kind: "page", slug: hash })
+    if (d.pages.find((p) => p.slug === hash)) {
+      window.location.hash = ""
+      router.replace(hash === (d.pages.find((p) => p.isHome)?.slug ?? "home") ? "/" : `/p/${hash}`)
     }
-  }, [data])
+  }, [])
 
-  // Listen for hash changes (back/forward)
-  useEffect(() => {
-    const onHash = () => {
-      if (!data) return
-      const hash = window.location.hash.replace(/^#/, "")
-      if (hash === "admin" || hash.startsWith("admin")) return
-      if (hash.startsWith("blog/")) {
-        const postId = hash.slice(5)
-        if (data.blogPosts.find((p) => p.id === postId)) {
-          setView({ kind: "blog", postId })
-          return
-        }
-      }
-      if (hash && data.pages.find((p) => p.slug === hash)) {
-        setView({ kind: "page", slug: hash })
-      } else if (!hash) {
-        const home = data.pages.find((p) => p.isHome)
-        if (home) setView({ kind: "page", slug: home.slug })
-      }
-    }
-    window.addEventListener("hashchange", onHash)
-    return () => window.removeEventListener("hashchange", onHash)
-  }, [data])
-
-  const navigatePage = (slug: string) => {
-    setView({ kind: "page", slug })
-    window.location.hash = slug
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-  const navigatePost = (postId: string) => {
-    setView({ kind: "blog", postId })
-    window.location.hash = `blog/${postId}`
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  if (loading) {
+  if (!data) {
+    // extremely rare — store refresh failure; show minimal shell
     return (
       <div className="flex min-h-[100svh] items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -102,28 +61,31 @@ export function MemorialApp() {
     )
   }
 
-  if (error || !data) {
-    return (
-      <div className="flex min-h-[100svh] items-center justify-center px-6 text-center">
-        <div>
-          <p className="font-display text-xl text-muted-foreground mb-3">مشکلی پیش آمد</p>
-          <button onClick={() => load()} className="rounded-full bg-[oklch(0.36_0.07_168)] px-5 py-2 text-sm text-ivory">تلاش دوباره</button>
-        </div>
-      </div>
-    )
-  }
-
   const setting = data.setting!
   const navPages = data.pages.filter((p) => p.showInNav).sort((a, b) => a.order - b.order)
   const homeSlug = data.pages.find((p) => p.isHome)?.slug ?? "home"
+
+  const navigatePage = (slug: string) => {
+    router.push(slug === homeSlug ? "/" : `/p/${slug}`)
+  }
+  const navigatePost = (postId: string) => {
+    router.push(`/blog/${postId}`)
+  }
 
   const renderMain = () => {
     if (view.kind === "blog") {
       const post = data.blogPosts.find((p) => p.id === view.postId)
       if (!post) {
-        return <div className="py-20 text-center text-muted-foreground">نوشته یافت نشد. <button onClick={() => navigatePage("blog")} className="text-[oklch(0.36_0.07_168)] underline">بازگشت به بلاگ</button></div>
+        return (
+          <div className="py-20 text-center text-muted-foreground">
+            نوشته یافت نشد.{" "}
+            <button onClick={() => navigatePage("blog")} className="text-[oklch(0.36_0.07_168)] underline">
+              بازگشت به بلاگ
+            </button>
+          </div>
+        )
       }
-      return <BlogPostView post={post} onBack={() => navigatePage("blog")} />
+      return <BlogPostView post={post} />
     }
     const page = data.pages.find((p) => p.slug === view.slug) ?? data.pages.find((p) => p.slug === homeSlug)
     if (!page) return <div className="py-20 text-center text-muted-foreground">صفحه یافت نشد.</div>
@@ -163,12 +125,8 @@ export function MemorialApp() {
         </AnimatePresence>
       </main>
 
-      <MemorialFooter onAdminClick={() => setAdminOpen(true)} setting={setting} />
+      <MemorialFooter setting={setting} />
       <BottomNav pages={navPages} currentSlug={view.kind === "page" ? view.slug : "blog"} onNavigate={navigatePage} />
-
-      <AnimatePresence>
-        {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} onChanged={load} />}
-      </AnimatePresence>
     </div>
   )
 }
@@ -181,6 +139,7 @@ function TopNav({ pages, setting, currentSlug, onNavigate }: { pages: { slug: st
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
+  const homeSlug = pages.find((p) => p.navIcon === "Home")?.slug ?? "home"
   return (
     <motion.header
       initial={{ y: -40, opacity: 0 }}
@@ -189,10 +148,10 @@ function TopNav({ pages, setting, currentSlug, onNavigate }: { pages: { slug: st
       className={`sticky top-0 z-40 transition-all duration-300 ${scrolled ? "bg-[oklch(0.985_0.006_85/0.85)] backdrop-blur-lg border-b border-[oklch(0.74_0.135_82/0.15)] shadow-sm" : "bg-transparent"}`}
     >
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <button onClick={() => onNavigate(pages.find((p) => p.navIcon === "Home")?.slug ?? "home")} className="font-display text-lg sm:text-xl emerald-text hover:opacity-80 transition">
+        <button onClick={() => onNavigate(homeSlug)} className="font-display text-lg sm:text-xl emerald-text hover:opacity-80 transition">
           {setting.fullName}
         </button>
-        <nav className="hidden sm:flex items-center gap-1">
+        <nav className="hidden sm:flex items-center gap-1" aria-label="ناوبری اصلی">
           {pages.map((p) => (
             <button key={p.slug} onClick={() => onNavigate(p.slug)} className={`relative rounded-full px-3.5 py-1.5 text-sm font-medium transition-all ${currentSlug === p.slug ? "text-[oklch(0.36_0.07_168)]" : "text-muted-foreground hover:text-[oklch(0.36_0.07_168)]"}`}>
               {currentSlug === p.slug && <motion.span layoutId="nav-active" className="absolute inset-0 -z-10 rounded-full bg-[oklch(0.92_0.035_82)]" transition={{ type: "spring", stiffness: 380, damping: 30 }} />}
@@ -287,43 +246,5 @@ function BottomNav({ pages, currentSlug, onNavigate }: { pages: { slug: string; 
         )}
       </AnimatePresence>
     </>
-  )
-}
-
-function BlogPostView({ post, onBack }: { post: { id: string; title: string; excerpt: string | null; content: string; coverImage: string | null; videoUrl: string | null; publishedAt: string | null; tags: string | null }; onBack: () => void }) {
-  return (
-    <article className="px-5 py-12 sm:py-16">
-      <div className="mx-auto max-w-2xl">
-        <button onClick={onBack} className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-[oklch(0.36_0.07_168)] transition">
-          <ChevronRight className="h-4 w-4" /> بازگشت به فهرست
-        </button>
-        {post.coverImage && (
-          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }} className="mb-6 overflow-hidden rounded-2xl border border-[oklch(0.74_0.135_82/0.25)] shadow-lg">
-            <img src={post.coverImage} alt={post.title} className="w-full h-64 sm:h-80 object-cover" />
-          </motion.div>
-        )}
-        {post.publishedAt && <p className="mb-2 text-xs text-muted-foreground">{new Intl.DateTimeFormat("fa-IR", { dateStyle: "full" }).format(new Date(post.publishedAt))}</p>}
-        <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="font-display text-3xl sm:text-4xl emerald-text mb-4 text-balance">{post.title}</motion.h1>
-        {post.tags && (
-          <div className="mb-6 flex flex-wrap gap-1.5">
-            {post.tags.split(",").map((t) => t.trim()).filter(Boolean).map((t) => (
-              <span key={t} className="rounded-full bg-[oklch(0.95_0.018_82)] px-2 py-0.5 text-[11px] text-muted-foreground">#{t}</span>
-            ))}
-          </div>
-        )}
-        {post.videoUrl && (
-          <div className="mb-6">
-            <video src={post.videoUrl} controls className="w-full rounded-xl border border-[oklch(0.74_0.135_82/0.25)]" />
-          </div>
-        )}
-        <div className="prose-memorial">
-          {post.content.split("\n").map((p, i) => {
-            const line = p.trim()
-            if (!line) return <div key={i} className="h-3" />
-            return <motion.p key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: Math.min(i * 0.03, 0.5) }} className="mb-4 leading-9 text-[15px] sm:text-base text-foreground/85 text-justify">{line}</motion.p>
-          })}
-        </div>
-      </div>
-    </article>
   )
 }

@@ -6,25 +6,15 @@
 
 - **صفحه‌ساز کامل (CMS)** — مثل وردپرس، صفحه و بخش اضافه/ویرایش/حذف کن
 - **۱۲ نوع بخش** — هیرو، متن، تصویر، گالری، اسلایدر، ویدیو، خط زمانی، نقل‌قول، کتاب یادبود، بلاگ، CTA، جداکننده
-- **گالری iOS Photos** — دسته‌بندی با کارت‌های ۳×۳، انیمیشن باز شدن، lazy loading
-- **پلیر ویدیو** — تایم‌لاین، پخش/توقف، RTL
-- **نمایشگر تصویر** — باز شدن از جای کلیک با GSAP، بلور پس‌زمینه، دکمه دانلود
-- **سکشن متن** — تصویر با float (راست/چپ/بالا/پایین)، سایز قابل تنظیم، گوشه گرد/تیز، حاشیه، سایه
-- **فونت‌های سفارشی** — آپلود TTF، ۱۷ فونت فارسی نصب شده
-- **کتابخانه رسانه** — دسته‌بندی، جستجو، ویرایش متادیتا
-- **بلاگ/خبر** — مراسم یادبود، کارهای خیر
-- **کتاب یادبود** — بازدیدکنندگان پیام بذارن
+- **گالری iOS Photos** — دسته‌بندی با کارت‌های ۳×۳، انیمیشن باز شدن، lazy loading + thumbnail خودکار (WebP)
+- **SEO سطح جهانی** — SSR کامل، URLهای واقعی (`/p/[slug]`)، Sitemap داینامیک، JSON-LD (Person/BlogPosting)، OG Image اختصاصی برای هر صفحه
+- **PWA** — قابل نصب روی موبایل با آیکون اختصاصی
+- **امنیت** — رمز scrypt-هش، Rate-limiting، honeypot ضداسپم، اعتبارسنجی magic-bytes آپلود
+- **فونت‌های خودکفا** — ۱۷ فونت فارسی لوکال، بدون هیچ CDN خارجی
 - **کد QR** — برای سنگ قبر
 - **پنل مدیریت** — روی `/admin`
-- **تم رنگی** — عاج + سبز زمردی + طلایی
 
 ## 🚀 راه‌اندازی
-
-### پیش‌نیازها
-- Node.js 18+ یا Bun
-- SQLite (پیش‌فرض نصب)
-
-### مراحل
 
 ```bash
 # نصب وابستگی‌ها
@@ -33,56 +23,58 @@ bun install
 # تنظیم دیتابیس
 bun run db:push
 
-# پر کردن دیتابیس با داده‌های اولیه
-bun run prisma/seed.ts
-
 # اجرای سرور توسعه
 bun run dev
 ```
 
-سایت روی `http://localhost:3000` در دسترسه.
-
 ### پنل مدیریت
+آدرس: `/admin` — رمز عبور را از صاحب سایت دریافت کنید (در دیتابیس به‌صورت scrypt هش شده نگهداری می‌شود و هرگز به مرورگر ارسال نمی‌گردد).
 
-آدرس: `http://localhost:3000/admin`
-
-رمز پیش‌فرض: `abolfazl1405`
+### متغیرهای محیطی (اختیاری)
+```
+DATABASE_URL=file:./db/custom.db
+ADMIN_SECRET=<یک رشته تصادفی طولانی>
+NEXT_PUBLIC_SITE_URL=https://example.ir   # برای canonical/sitemap/OG
+```
 
 ## 📁 ساختار پروژه
 
 ```
 src/
 ├── app/                    # صفحات و API ها
+│   ├── p/[slug]/           # صفحات CMS (SSR + metadata)
+│   ├── blog/[id]/          # پست‌های بلاگ (SSR + OG image)
 │   ├── admin/              # پنل مدیریت
-│   ├── api/                # API routes
-│   └── layout.tsx          # لایوت اصلی
+│   ├── sitemap.ts          # نقشه سایت داینامیک
+│   ├── robots.ts           # robots.txt
+│   ├── manifest.ts         # PWA manifest
+│   └── opengraph-image.tsx # OG image داینامیک (فارسی)
 ├── components/
 │   ├── memorial/           # کامپوننت‌های سایت
 │   │   ├── admin/          # پنل مدیریت
-│   │   ├── gallery-section.tsx
-│   │   ├── viewer.tsx      # نمایشگر تصویر
-│   │   └── ...
+│   │   └── seo/            # JSON-LD
 │   └── ui/                 # shadcn/ui
 ├── lib/
 │   ├── db.ts               # Prisma client
-│   ├── auth.ts             # احراز هویت
-│   ├── store.ts            # Zustand store
-│   ├── fonts.ts            # رجیستری فونت
-│   └── section-types.ts    # تعریف نوع بخش‌ها
-└── prisma/
-    ├── schema.prisma       # schema دیتابیس
-    └── seed.ts             # داده‌های اولیه
+│   ├── auth.ts             # scrypt + session token
+│   ├── rate-limit.ts       # محدودکننده نرخ درخواست
+│   ├── site-data.ts        # منبع واحد داده (SSR + API)
+│   └── store.ts            # Zustand store
+├── scripts/
+│   ├── cleanup.mjs         # پاکسازی داده تستی + backfill thumbnail
+│   └── gen-icons.mjs       # تولید آیکون‌های PWA
+└── prisma/schema.prisma
 ```
 
 ## 🛠 تکنولوژی‌ها
 
-- **Next.js 16** (App Router, webpack)
+- **Next.js 16** (App Router, SSR)
 - **TypeScript 5**
 - **Tailwind CSS 4 + shadcn/ui**
 - **Prisma ORM** (SQLite)
-- **Framer Motion** (انیمیشن)
-- **GSAP** (انیمیشن iOS)
+- **Framer Motion + GSAP** (انیمیشن)
 - **Zustand** (state management)
+- **sharp** (thumbnail + WebP)
 - **Lucide Icons**
 
 ## 📝 لایسنس

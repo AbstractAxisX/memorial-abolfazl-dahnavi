@@ -1,10 +1,13 @@
 "use client"
 
 import { useEffect, useMemo } from "react"
-import type { FontFile } from "./store"
+import type { FontFile } from "./types"
 
-// Built-in font registry — fonts loaded via next/font (Vazirmatn, Nastaliq)
-// or Google CDN <link> (Gulzar, Lalezar, Markazi) or fontcdn.ir (Shabnam, Sahel, Samim, Gandom).
+// 100% self-hosted font system:
+// - vazirmatn + nastaliq via next/font (bundled at build)
+// - everything else via the custom font registry (TTFs in /public/fonts, injected at runtime)
+// → zero external CDN requests, fast & reliable for Iranian visitors.
+
 export type FontDef = {
   key: string
   label: string
@@ -16,13 +19,6 @@ export type FontDef = {
 export const BUILTIN_FONTS: FontDef[] = [
   { key: "vazirmatn", label: "وزیرمتن", family: "var(--font-vazirmatn), Vazirmatn, sans-serif", source: "builtin", kind: "both" },
   { key: "nastaliq", label: "نستعلیق (نوتو)", family: "var(--font-nastaliq), 'Noto Nastaliq Urdu', serif", source: "builtin", kind: "display" },
-  { key: "gulzar", label: "گلزار (نستعلیق)", family: "Gulzar, 'Noto Nastaliq Urdu', serif", source: "builtin", kind: "display" },
-  { key: "lalezar", label: "لاله‌زار", family: "Lalezar, sans-serif", source: "builtin", kind: "display" },
-  { key: "markazi", label: "مرکزی", family: "'Markazi Text', serif", source: "builtin", kind: "both" },
-  { key: "shabnam", label: "شبنم", family: "Shabnam, sans-serif", source: "builtin", kind: "both" },
-  { key: "sahel", label: "ساحل", family: "Sahel, sans-serif", source: "builtin", kind: "both" },
-  { key: "samim", label: "صمیم", family: "Samim, sans-serif", source: "builtin", kind: "both" },
-  { key: "gandom", label: "گندم", family: "Gandom, sans-serif", source: "builtin", kind: "display" },
 ]
 
 // Hook that returns the full font list (builtin + custom) for a given set of custom fonts.

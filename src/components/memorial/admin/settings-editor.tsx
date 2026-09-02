@@ -10,21 +10,25 @@ import { ImageUpload } from "./image-upload"
 import { QrCodeGenerator } from "./qr-code"
 
 export function SettingsEditor({ setting, customFonts = [] }: { setting: SiteSetting | null; customFonts?: FontFile[] }) {
-  const [form, setForm] = useState<Partial<SiteSetting>>(setting ?? {})
+  const [form, setForm] = useState<Partial<SiteSetting> & { adminPassword?: string }>(setting ?? {})
   const [saving, setSaving] = useState(false)
 
-  const set = (k: keyof SiteSetting, v: unknown) => setForm((p) => ({ ...p, [k]: v }))
+  const set = (k: keyof SiteSetting | "adminPassword", v: unknown) => setForm((p) => ({ ...p, [k]: v }))
 
   const save = async () => {
     setSaving(true)
     try {
+      const payload: Record<string, unknown> = { ...form }
+      // only send password when the admin actually typed a new one
+      if (!payload.adminPassword) delete payload.adminPassword
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error("ذخیره ناموفق بود")
+      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error || "ذخیره ناموفق بود") }
       toast.success("تنظیمات ذخیره شد")
+      setForm((p) => ({ ...p, adminPassword: "" }))
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -74,7 +78,10 @@ export function SettingsEditor({ setting, customFonts = [] }: { setting: SiteSet
       <QrCodeGenerator publicUrl={form.publicUrl ?? null} />
 
       <Card title="امنیت پنل" subtitle="تغییر رمز ورود به پنل مدیریت">
-        <Field label="رمز عبور مدیریت"><Input value={form.adminPassword ?? ""} onChange={(e) => set("adminPassword", e.target.value)} dir="ltr" /></Field>
+        <Field label="رمز عبور جدید (حداقل ۸ کاراکتر — برای حفظ رمز فعلی خالی بگذارید)">
+          <Input type="password" value={form.adminPassword ?? ""} onChange={(e) => set("adminPassword", e.target.value)} dir="ltr" autoComplete="new-password" />
+        </Field>
+        <p className="text-[11px] text-muted-foreground/70 leading-5">رمز به‌صورت امن (scrypt) هش می‌شود و هرگز به مرورگر ارسال نمی‌گردد. پس از تغییر رمز، باید دوباره وارد شوید.</p>
       </Card>
 
       <div className="sticky bottom-4 flex justify-end gap-2">

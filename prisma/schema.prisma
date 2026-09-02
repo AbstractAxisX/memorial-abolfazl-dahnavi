@@ -23,7 +23,10 @@ model SiteSetting {
   heroImage       String?
   heroIntro       String?
   publicUrl       String?
-  adminPassword   String   @default("abolfazl1405")
+  /// Deprecated plaintext password (migrated to adminPasswordHash on first login)
+  adminPassword   String   @default("")
+  /// scrypt password hash (scheme:salt:hash) — never expose via API
+  adminPasswordHash String?
   /// Global body font key
   globalFontKey   String   @default("vazirmatn")
   /// Global heading/display font key

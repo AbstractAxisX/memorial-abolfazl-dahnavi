@@ -38,9 +38,6 @@ next-env.d.ts
 *.db
 *.db-journal
 
-# Uploads (keep directory structure but ignore files)
-public/uploads/*
-!public/uploads/.gitkeep
 
 # Logs
 dev.log
@@ -54,5 +51,3 @@ server.log
 # Agent browser
 agent-browser/
 
-# Upload directory
-upload/

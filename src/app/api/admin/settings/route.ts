@@ -1,11 +1,12 @@
 import { db } from "@/lib/db"
 import { json, parseJson } from "@/lib/api"
-import { requireAdmin } from "@/lib/auth"
+import { requireAdmin, hashPassword } from "@/lib/auth"
+import { sanitizeSetting } from "@/lib/site-data"
 
 const ALLOWED = [
   "fullName", "displayTitle", "subtitle", "birthDate", "martyrdomDate",
   "martyrdomPlace", "role", "heroImage", "heroIntro", "publicUrl",
-  "adminPassword", "globalFontKey", "headingFontKey", "accent",
+  "globalFontKey", "headingFontKey", "accent",
 ]
 
 export async function PUT(req: Request) {
@@ -13,10 +14,20 @@ export async function PUT(req: Request) {
   if (guard) return guard
   const body = await parseJson<Record<string, unknown>>(req)
   if (!body) return json({ error: "بدنه نامعتبر" }, 400)
+
   const data: Record<string, unknown> = {}
   for (const k of ALLOWED) {
     if (k in body) data[k] = body[k]
   }
+
+  // password: only change when a non-empty value is provided
+  const newPassword = typeof body.adminPassword === "string" ? body.adminPassword.trim() : ""
+  if (newPassword) {
+    if (newPassword.length < 8) return json({ error: "رمز عبور باید حداقل ۸ کاراکتر باشد" }, 400)
+    data.adminPasswordHash = hashPassword(newPassword)
+    data.adminPassword = ""
+  }
+
   const updated = await db.siteSetting.upsert({
     where: { id: "main" },
     update: data,
@@ -28,11 +39,13 @@ export async function PUT(req: Request) {
       martyrdomDate: (data.martyrdomDate as string) ?? "۱۵ فروردین ۱۴۰۵",
       martyrdomPlace: (data.martyrdomPlace as string) ?? "شهرستان مبارکه، اصفهان",
       role: (data.role as string) ?? "امدادگر یکم جمعیت هلال احمر",
-      adminPassword: (data.adminPassword as string) ?? "abolfazl1405",
       heroIntro: (data.heroIntro as string) ?? "",
       globalFontKey: (data.globalFontKey as string) ?? "vazirmatn",
       headingFontKey: (data.headingFontKey as string) ?? "nastaliq",
+      ...(data.adminPasswordHash ? { adminPasswordHash: data.adminPasswordHash as string } : {}),
     },
   })
-  return json({ setting: updated })
+
+  // never return password fields
+  return json({ setting: sanitizeSetting(updated) })
 }

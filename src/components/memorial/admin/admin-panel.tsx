@@ -121,7 +121,6 @@ function LoginScreen({ password, setPassword, onSubmit }: { password: string; se
         </div>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus dir="ltr" placeholder="••••••••" className="w-full rounded-xl border border-[oklch(0.74_0.135_82/0.25)] bg-ivory px-4 py-3 text-center text-lg tracking-widest outline-none focus:border-[oklch(0.74_0.135_82)] focus:ring-2 focus:ring-[oklch(0.74_0.135_82/0.2)]" />
         <button type="submit" className="mt-4 w-full rounded-xl bg-[oklch(0.36_0.07_168)] py-3 text-sm font-medium text-ivory shadow-lg shadow-[oklch(0.36_0.07_168/0.3)] transition hover:bg-[oklch(0.3_0.07_170)] active:scale-95">ورود</button>
-        <p className="mt-4 text-center text-[11px] text-muted-foreground/60">رمز پیش‌فرض: abolfazl1405 (از تب تنظیمات قابل تغییر)</p>
       </motion.form>
     </div>
   )

@@ -1,103 +1,18 @@
 "use client"
 
 import { create } from "zustand"
+import type {
+  SiteData,
+  SiteSetting,
+  Section,
+  Page,
+  MediaFile,
+  BlogPost,
+  GuestMessage,
+  FontFile,
+} from "./types"
 
-export type SiteSetting = {
-  id: string
-  fullName: string
-  displayTitle: string
-  subtitle: string
-  birthDate: string | null
-  martyrdomDate: string
-  martyrdomPlace: string
-  role: string
-  heroImage: string | null
-  heroIntro: string | null
-  publicUrl: string | null
-  adminPassword: string
-  globalFontKey: string
-  headingFontKey: string
-  accent: string
-}
-
-export type Section = {
-  id: string
-  pageId: string
-  type: string
-  title: string | null
-  subtitle: string | null
-  config: string // JSON
-  fontKey: string | null
-  background: string
-  order: number
-  visible: boolean
-}
-
-export type Page = {
-  id: string
-  slug: string
-  title: string
-  subtitle: string | null
-  showInNav: boolean
-  navIcon: string
-  isHome: boolean
-  order: number
-  sections: Section[]
-}
-
-export type MediaFile = {
-  id: string
-  url: string
-  type: string
-  thumb: string | null
-  title: string | null
-  description: string | null
-  alt: string | null
-  category: string
-  width: number | null
-  height: number | null
-  size: number | null
-  createdAt: string
-}
-
-export type BlogPost = {
-  id: string
-  title: string
-  excerpt: string | null
-  content: string
-  coverImage: string | null
-  videoUrl: string | null
-  publishedAt: string | null
-  featured: boolean
-  tags: string | null
-  order: number
-  createdAt: string
-}
-
-export type GuestMessage = {
-  id: string
-  name: string
-  text: string
-  approved: boolean
-  createdAt: string
-}
-
-export type FontFile = {
-  id: string
-  name: string
-  label: string
-  url: string
-  createdAt: string
-}
-
-export type SiteData = {
-  setting: SiteSetting | null
-  pages: Page[]
-  blogPosts: BlogPost[]
-  messages: GuestMessage[]
-  fonts: FontFile[]
-  media: MediaFile[]
-}
+export type { SiteData, SiteSetting, Section, Page, MediaFile, BlogPost, GuestMessage, FontFile }
 
 type State = {
   data: SiteData | null
@@ -122,6 +37,17 @@ export const useMemorial = create<State>((set) => ({
     }
   },
 }))
+
+// Hydrate the store with server-rendered data (no loading flash, full SEO HTML).
+// - Server: always overwrite (per-request freshness)
+// - Client: only when empty (preserves refreshes from load())
+export function hydrateStore(initialData: SiteData) {
+  if (typeof window === "undefined") {
+    useMemorial.setState({ data: initialData, loading: false, error: null })
+  } else if (!useMemorial.getState().data) {
+    useMemorial.setState({ data: initialData, loading: false, error: null })
+  }
+}
 
 // Helper to parse section config JSON safely
 export function parseConfig<T = Record<string, unknown>>(section: Section, fallback: T): T {

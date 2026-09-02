@@ -1,19 +1,12 @@
-/* Persian CDN fonts (Shabnam, Sahel, Samim, Gandom) loaded via <link> in layout.
-   Gulzar, Lalezar, Markazi Text loaded via Google Fonts <link> in layout.
-   Vazirmatn + Noto Nastaliq Urdu loaded via next/font (variables --font-vazirmatn, --font-nastaliq).
-   This file holds helper classes that apply font families dynamically. */
+/* Fully self-hosted font system:
+   - Vazirmatn + Noto Nastaliq Urdu via next/font (CSS variables --font-vazirmatn, --font-nastaliq)
+   - Shabnam, Sahel, Samim, Gandom, Lalezar, … via custom font registry (TTFs in /public/fonts, @font-face injected at runtime)
+   → no external CDN requests. */
 
 /* Font family utility classes — applied when a section/element uses a specific font */
 .font-vazirmatn { font-family: var(--font-vazirmatn), Vazirmatn, sans-serif; }
 .font-nastaliq  { font-family: var(--font-nastaliq), 'Noto Nastaliq Urdu', serif; line-height: 1.9; padding-bottom: 0.45em; overflow: visible; display: inline-block; }
-.font-gulzar    { font-family: Gulzar, 'Noto Nastaliq Urdu', serif; line-height: 1.9; padding-bottom: 0.4em; overflow: visible; display: inline-block; }
-.font-lalezar   { font-family: Lalezar, sans-serif; }
 .font-estedad   { font-family: Vazirmatn, sans-serif; } /* fallback */
-.font-markazi   { font-family: 'Markazi Text', serif; }
-.font-shabnam   { font-family: Shabnam, sans-serif; }
-.font-sahel     { font-family: Sahel, sans-serif; }
-.font-samim     { font-family: Samim, sans-serif; }
-.font-gandom    { font-family: Gandom, sans-serif; }
 
 /* Display heading helper — when using a display font, ensure no clipping */
 .is-display-font {

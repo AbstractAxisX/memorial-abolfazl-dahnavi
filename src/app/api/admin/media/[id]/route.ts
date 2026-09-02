@@ -4,6 +4,19 @@ import { requireAdmin } from "@/lib/auth"
 import { unlink } from "fs/promises"
 import path from "path"
 
+// safely delete a file inside public/ (no path traversal)
+async function safeDelete(publicUrl: string) {
+  if (!publicUrl.startsWith("/") || publicUrl.includes("..")) return
+  const rel = publicUrl.replace(/^\/+/, "")
+  const target = path.join(process.cwd(), "public", rel)
+  if (!target.startsWith(path.join(process.cwd(), "public"))) return
+  try {
+    await unlink(target)
+  } catch {
+    // already gone
+  }
+}
+
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requireAdmin()
   if (guard) return guard
@@ -24,13 +37,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params
   const file = await db.mediaFile.findUnique({ where: { id } })
   if (file) {
-    // delete the physical file too
-    try {
-      const rel = file.url.replace(/^\/+/, "")
-      await unlink(path.join(process.cwd(), "public", rel))
-    } catch {
-      // ignore — maybe already gone
-    }
+    // delete the physical file AND its thumbnail
+    await safeDelete(file.url)
+    if (file.thumb) await safeDelete(file.thumb)
     await db.mediaFile.delete({ where: { id } })
   }
   return json({ ok: true })

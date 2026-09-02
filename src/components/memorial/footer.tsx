@@ -2,12 +2,11 @@
 
 import { motion } from "framer-motion"
 import { Lock, Heart } from "lucide-react"
+import Link from "next/link"
 
 export function MemorialFooter({
-  onAdminClick,
   setting,
 }: {
-  onAdminClick: () => void
   setting: { martyrdomDate: string } | null
 }) {
   return (
@@ -25,6 +24,8 @@ export function MemorialFooter({
           <img
             src="/decor/candle.png"
             alt=""
+            width={64}
+            height={64}
             className="mb-4 h-16 w-16 rounded-full object-cover opacity-90 shadow-lg shadow-[oklch(0.74_0.135_82/0.2)]"
           />
           <p className="font-display text-xl sm:text-2xl gold-text mb-1">
@@ -45,15 +46,16 @@ export function MemorialFooter({
             <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
               <Heart className="h-3 w-3" /> ساخته شده با عشق برای جاودانگی نام
             </span>
-            <button
-              onClick={onAdminClick}
+            <Link
+              href="/admin"
+              prefetch={false}
               className="inline-flex items-center gap-1 rounded-full border border-[oklch(0.74_0.135_82/0.2)] px-2.5 py-1 text-[11px] text-muted-foreground/70 transition-all hover:border-[oklch(0.74_0.135_82/0.5)] hover:text-[oklch(0.36_0.07_168)]"
               aria-label="ورود به پنل مدیریت"
               title="پنل مدیریت"
             >
               <Lock className="h-3 w-3" />
               مدیریت
-            </button>
+            </Link>
           </div>
         </motion.div>
       </div>

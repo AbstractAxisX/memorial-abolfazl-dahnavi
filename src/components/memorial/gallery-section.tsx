@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useRef, useEffect } from "react"
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, Film } from "lucide-react"
 import type { Section, MediaFile } from "@/lib/store"
@@ -208,7 +209,14 @@ function LazyItem({ item, onClick }: { item: ItemT; onClick: (rect: DOMRect) => 
           {item.type === "video" ? (
             <video src={item.url} muted playsInline preload="metadata" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
           ) : (
-            <img src={item.thumb || item.url} alt={item.caption ?? ""} loading="lazy" onLoad={() => setLoaded(true)} className={"h-full w-full object-cover transition-all duration-500 " + (loaded ? "opacity-100 scale-100" : "opacity-0 scale-95") + " group-hover:scale-105"} />
+            <Image
+              src={item.thumb || item.url}
+              alt={item.caption ?? ""}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+              onLoad={() => setLoaded(true)}
+              className={"object-cover transition-all duration-500 " + (loaded ? "opacity-100 scale-100" : "opacity-0 scale-95") + " group-hover:scale-105"}
+            />
           )}
           {item.type === "video" && <div className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50"><Film className="h-3 w-3 text-white" /></div>}
           {item.caption && <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2"><p className="text-white text-[10px] leading-tight line-clamp-2">{item.caption}</p></div>}
