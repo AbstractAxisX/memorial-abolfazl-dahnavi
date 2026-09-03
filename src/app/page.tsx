@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { MemorialApp } from "@/components/memorial/memorial-app"
 import { fetchSiteData, siteBaseUrl, pageDescription } from "@/lib/site-data"
-import { PersonJsonLd, WebSiteJsonLd } from "@/components/seo/json-ld"
+import { PersonJsonLd, WebSiteJsonLd, MediaJsonLd } from "@/components/seo/json-ld"
 
 export const dynamic = "force-dynamic"
 
@@ -46,6 +46,7 @@ export default async function Home() {
     <>
       <PersonJsonLd setting={data.setting} baseUrl={siteBaseUrl(data.setting)} />
       <WebSiteJsonLd baseUrl={siteBaseUrl(data.setting)} />
+      <MediaJsonLd media={data.media} setting={data.setting} baseUrl={siteBaseUrl(data.setting)} />
       <MemorialApp initialData={data} view={{ kind: "page", slug: home?.slug ?? "home" }} />
     </>
   )

@@ -96,11 +96,19 @@ export function GallerySection({ section, media }: { section: Section; media: Me
                     <div className="relative aspect-square overflow-hidden rounded-[22%] border border-[oklch(0.76_0.14_80/0.15)] bg-ivory p-[5%] shadow-sm transition-all duration-200 group-hover:scale-105 group-active:scale-95">
                       <div className="grid h-full w-full grid-cols-3 grid-rows-3 gap-[4%]">
                         {thumbs.map((img, i) => (
-                          <div key={i} className="overflow-hidden rounded-[18%]">
-                            {img.type === "video" ? (
-                              <video src={img.url} muted playsInline preload="metadata" className="h-full w-full object-cover" />
-                            ) : (
-                              <img src={img.thumb || img.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          <div key={i} className="relative overflow-hidden rounded-[18%]">
+                            {/* grid tiles NEVER download video data — poster/thumb + badge only */}
+                            <img
+                              src={img.thumb || img.url}
+                              alt=""
+                              loading={i < 3 ? "eager" : "lazy"}
+                              decoding="async"
+                              className="h-full w-full object-cover"
+                            />
+                            {img.type === "video" && (
+                              <span className="absolute bottom-[4%] right-[4%] flex h-[18%] aspect-square items-center justify-center rounded-full bg-black/55">
+                                <Film className="h-[60%] w-[60%] text-white" />
+                              </span>
                             )}
                           </div>
                         ))}
@@ -207,7 +215,15 @@ function LazyItem({ item, onClick }: { item: ItemT; onClick: (rect: DOMRect) => 
       {inView && (
         <>
           {item.type === "video" ? (
-            <video src={item.url} muted playsInline preload="metadata" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            /* poster + preload none: ZERO video bytes until the viewer opens */
+            <video
+              src={item.url}
+              poster={item.thumb || undefined}
+              muted
+              playsInline
+              preload="none"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
           ) : (
             <Image
               src={item.thumb || item.url}

@@ -528,3 +528,24 @@ Stage Summary:
 - Uploaded media now loads for visitors on ANY deployment (dev, next start, standalone) — the runtime static-serving gap is closed by the disk-streaming routes
 - No URLs, no DB rows, no migration: existing committed media keeps the fast static path; runtime uploads get the route path
 - Deploy note: after pulling this commit, restart the dev server once (or rebuild for production: bun run build) so the new routes are picked up
+
+---
+Task ID: 11 (session 6)
+Agent: main (Z.ai Code)
+Task: Original-size viewer + strong player, lightning speed, powerful SEO (user: "عکس‌ها با سایز اصلی باز شن، پلیر قوی، سرعت مثل برق، سئو بینظیر، گوشی‌های قدیمی لگ دارن")
+
+Work Log:
+- NEW media-viewer engine (media-viewer.tsx): photos open at ORIGINAL aspect ratio (old viewer forced a 400px square), blurred thumb placeholder, zoom 6x (wheel/pinch/dblclick/buttons) + pan, swipe nav, neighbor preload, download, counter; videos: full player (seek, ±10s, volume, speed, fullscreen, buffering, poster, auto-hide, keys). viewer.tsx + lightbox.tsx = thin wrappers, same old APIs
+- SPEED: grid video tiles → poster + preload=none (zero mp4 bytes until open; verified via performance.getEntriesByType), folder tiles → poster+Film badge (was <video>), ScrollReveal blur() removed (repaint jank), prefers-reduced-motion guard, popLayout reflow storms removed, hydration mismatch FIXED (Math.random particles → seeded mulberry32 PRNG) — 0 console errors
+- ROOT CAUSE of videos never playing: the memorial video was MPEG-4/DivX — no browser decodes it. Re-encoded to H.264+faststart (in place, same name), posters extracted for both videos, DB rows updated (thumbs/dims)
+- Upload route: auto-transcode non-browser-safe codecs + auto poster (ffmpeg optional, skip if absent)
+- NEW POST /api/admin/fix-videos + "تعمیر ویدیوها" button in admin media tab — one click repairs all existing videos on any deployment (transcode, poster, fresh uuid, row update, original kept .bak). Tested: mpeg4 → h264 + poster + row update; idempotent ("سالم — نیاز به تغییر نبود"); 401 unauth
+- SEO: ImageGallery + VideoObject JSON-LD (home + /p/gallery), sitemap image/video extensions for all media (23 entries live)
+- Verified on preview (mobile 390px): portrait 720×1280 opens at exact ratio (367×652), square 1024×1024 opens square, zoom 135%+transform, next/prev + counter, video plays (h264 672×384, poster, all controls), zero mp4 requests in grid, zero console/hydration errors, page total ~1.2MB
+- Committed code + re-encoded video + posters (NOT db/env — user's live server data stays authoritative)
+
+Stage Summary:
+- Viewer: original size + zoom + strong video player — done and browser-verified
+- Speed: no video bytes on grids, no blur repaints, no hydration re-patch, reduced-motion, lazy images — phone-friendly
+- SEO: full JSON-LD graph + image/video sitemap
+- User's server: git pull + click "تعمیر ویدیوها" once in admin → their existing videos fixed locally (their DB is authoritative)

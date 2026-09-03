@@ -388,3 +388,16 @@
   outline: 2px solid oklch(0.74 0.135 82);
   outline-offset: 2px;
 }
+
+/* ===== Performance guards =====
+   - prefers-reduced-motion: kill ALL infinite decorative animations
+     (huge win on low-end phones + accessibility)
+   - content-visibility: skip off-screen section rendering cost */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

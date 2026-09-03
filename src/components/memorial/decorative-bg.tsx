@@ -3,24 +3,37 @@
 import { useMemo } from "react"
 import { motion } from "framer-motion"
 
+// Deterministic PRNG (mulberry32) — the SAME particle layout is produced on
+// the server and on the client, so SSR HTML matches hydration 1:1.
+// (Math.random() caused a hydration attribute mismatch + console error.)
+function seededRandom(seed: number) {
+  let a = seed
+  return () => {
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 // Floating golden particles + slow rotating light rays + subtle pattern
 export function DecorativeBg({
   variant = "default",
 }: {
   variant?: "default" | "hero"
 }) {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: variant === "hero" ? 26 : 14 }).map((_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        size: 2 + Math.random() * 4,
-        delay: Math.random() * 12,
-        duration: 14 + Math.random() * 12,
-        opacity: 0.2 + Math.random() * 0.4,
-      })),
-    [variant]
-  )
+  const particles = useMemo(() => {
+    const rand = seededRandom(variant === "hero" ? 1405 : 2026)
+    return Array.from({ length: variant === "hero" ? 26 : 14 }).map((_, i) => ({
+      id: i,
+      left: rand() * 100,
+      size: 2 + rand() * 4,
+      delay: rand() * 12,
+      duration: 14 + rand() * 12,
+      opacity: 0.2 + rand() * 0.4,
+    }))
+  }, [variant])
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-x-hidden" aria-hidden>

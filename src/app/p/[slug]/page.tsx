@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { MemorialApp } from "@/components/memorial/memorial-app"
 import { fetchSiteData, siteBaseUrl, pageDescription } from "@/lib/site-data"
-import { BreadcrumbJsonLd } from "@/components/seo/json-ld"
+import { BreadcrumbJsonLd, MediaJsonLd } from "@/components/seo/json-ld"
 
 export const dynamic = "force-dynamic"
 
@@ -50,6 +50,7 @@ export default async function PageRoute({ params }: Props) {
         ]}
         baseUrl={siteBaseUrl(data.setting)}
       />
+      <MediaJsonLd media={data.media} setting={data.setting} baseUrl={siteBaseUrl(data.setting)} />
       <MemorialApp initialData={data} view={{ kind: "page", slug }} />
     </>
   )

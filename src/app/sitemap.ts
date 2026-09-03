@@ -40,5 +40,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   }
 
+  // gallery media → Google Images (image sitemap extension)
+  const galleryPage = entries.find((e) => e.url === `${base}/p/gallery`) ?? entries[0]
+  for (const m of data.media) {
+    if (m.type === "video") {
+      entries.push({
+        url: galleryPage.url,
+        lastModified: new Date(m.createdAt),
+        videos: [{
+          contentUrl: `${base}${m.url}`,
+          thumbnailUrl: m.thumb ? `${base}${m.thumb}` : undefined,
+        }],
+      })
+    } else {
+      entries.push({
+        url: galleryPage.url,
+        lastModified: new Date(m.createdAt),
+        images: [
+          {
+            loc: `${base}${m.url}`,
+            ...(m.title || m.alt ? { title: m.title || m.alt! } : {}),
+          },
+        ],
+      })
+    }
+  }
+
   return entries
 }

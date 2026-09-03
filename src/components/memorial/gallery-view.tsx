@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { Images, Film, Play } from "lucide-react"
 import type { GalleryItem } from "@/lib/store"
 import { SectionTitle } from "./ornaments"
@@ -59,19 +58,12 @@ export function GalleryView({ items }: { items: GalleryItem[] }) {
             </p>
           </div>
         ) : (
-          <motion.div
-            layout
+          <div
             className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4"
           >
-            <AnimatePresence mode="popLayout">
-              {filtered.map((item, i) => (
-                <motion.button
+            {filtered.map((item, i) => (
+                <button
                   key={item.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.4, delay: i * 0.03 }}
                   onClick={() => setLightboxIndex(i)}
                   className={`group relative overflow-hidden rounded-xl border border-[oklch(0.74_0.135_82/0.2)] bg-ivory shadow-sm hover:shadow-xl transition-shadow ${
                     i % 5 === 0 ? "col-span-2 row-span-1" : ""
@@ -82,8 +74,10 @@ export function GalleryView({ items }: { items: GalleryItem[] }) {
                       <>
                         <video
                           src={item.url}
+                          poster={item.thumb || undefined}
                           muted
                           playsInline
+                          preload="none"
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-[oklch(0.12_0.02_165/0.35)] group-hover:bg-[oklch(0.12_0.02_165/0.2)] transition">
@@ -96,6 +90,8 @@ export function GalleryView({ items }: { items: GalleryItem[] }) {
                       <img
                         src={item.thumb || item.url}
                         alt={item.caption ?? ""}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                     )}
@@ -108,10 +104,9 @@ export function GalleryView({ items }: { items: GalleryItem[] }) {
                       </p>
                     </div>
                   )}
-                </motion.button>
+                </button>
               ))}
-            </AnimatePresence>
-          </motion.div>
+          </div>
         )}
       </div>
 

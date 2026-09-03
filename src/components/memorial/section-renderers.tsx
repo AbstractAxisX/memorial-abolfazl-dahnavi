@@ -542,7 +542,7 @@ function VideoSection({ section }: { section: Section }) {
             onClick={() => { if (btnRef.current) setViewer({ rect: btnRef.current.getBoundingClientRect() }) }}
             className="group relative w-full overflow-hidden rounded-2xl border border-[oklch(0.76_0.14_80/0.25)] bg-black shadow-xl aspect-video mx-auto block"
           >
-            <video src={cfg.url} poster={cfg.poster || undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+            <video src={cfg.url} poster={cfg.poster || undefined} muted playsInline preload="none" className="h-full w-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[oklch(0.39_0.085_168)] text-white shadow-lg transition group-hover:scale-110">

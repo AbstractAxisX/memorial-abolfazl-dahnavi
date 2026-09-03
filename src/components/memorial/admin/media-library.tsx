@@ -14,6 +14,7 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "image" | "video">("all")
+  const [fixing, setFixing] = useState(false)
   const [activeCat, setActiveCat] = useState<string>("all")
   const [q, setQ] = useState("")
   const [editing, setEditing] = useState<MediaFile | null>(null)
@@ -31,6 +32,24 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
       setCategories(data.categories?.length ? data.categories : ["عمومی"])
     } catch { setError("بارگذاری ناموفق") }
     finally { setLoading(false) }
+  }
+
+  const fixVideos = async () => {
+    if (fixing) return
+    setFixing(true)
+    try {
+      const res = await fetch("/api/admin/fix-videos", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "خطا")
+      const fixed = (data.results || []).filter((r: { action: string }) => !r.action.includes("سالم")).length
+      if (fixed > 0) toast.success(`ویدیوها تعمیر شد (${toPersianDigits(fixed)} مورد)`)
+      else toast.info("همه ویدیوها سالم بودند")
+      await load()
+    } catch (e) {
+      toast.error("تعمیر ویدیوها ناموفق بود: " + (e as Error).message)
+    } finally {
+      setFixing(false)
+    }
   }
 
   useEffect(() => { load() }, [])
@@ -97,6 +116,9 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
           </Field>
           <button onClick={() => setShowNewCat((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full border border-[oklch(0.76_0.14_80/0.3)] px-3 py-2 text-xs text-[oklch(0.39_0.085_168)] hover:bg-[oklch(0.95_0.018_82)]">
             <FolderPlus className="h-3.5 w-3.5" /> دسته جدید
+          </button>
+          <button onClick={fixVideos} disabled={fixing} className="inline-flex items-center gap-1.5 rounded-full border border-[oklch(0.76_0.14_80/0.3)] px-3 py-2 text-xs text-[oklch(0.39_0.085_168)] hover:bg-[oklch(0.95_0.018_82)] disabled:opacity-50" title="ویدیوهای ناسازگار با مرورگر را به H.264 تبدیل می‌کند + تصویر پیش‌نمایش می‌سازد">
+            {fixing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Film className="h-3.5 w-3.5" />} {fixing ? "در حال تعمیر..." : "تعمیر ویدیوها"}
           </button>
           {showNewCat && (
             <div className="flex items-center gap-1">
