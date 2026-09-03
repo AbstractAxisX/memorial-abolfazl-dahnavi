@@ -53,8 +53,16 @@ export async function serveStorageFile(
   const base = storageDir(subdir)
   const abs = path.resolve(base, rel)
 
-  // traversal guard: resolved path must stay inside the storage dir
-  if (!rel || rel.includes("\0") || rel.split("/").includes("..") || !abs.startsWith(path.resolve(base) + path.sep)) {
+  // traversal guard: resolved path must stay inside the storage dir.
+  // dotfiles are also blocked (e.g. .staging-* = an upload in progress).
+  if (
+    !rel ||
+    rel.includes("\0") ||
+    rel.split("/").some((s) => s === ".." || s.startsWith("."))
+  ) {
+    return new Response("Not found", { status: 404 })
+  }
+  if (!abs.startsWith(path.resolve(base) + path.sep)) {
     return new Response("Not found", { status: 404 })
   }
 

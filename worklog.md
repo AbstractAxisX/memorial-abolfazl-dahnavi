@@ -549,3 +549,26 @@ Stage Summary:
 - Speed: no video bytes on grids, no blur repaints, no hydration re-patch, reduced-motion, lazy images — phone-friendly
 - SEO: full JSON-LD graph + image/video sitemap
 - User's server: git pull + click "تعمیر ویدیوها" once in admin → their existing videos fixed locally (their DB is authoritative)
+
+---
+Task ID: 12 (session 7)
+Agent: main (Z.ai Code)
+Task: User: "حداکثر آپلود ۲۵ مگ بود — بذار ۲۰۰! فیلم‌های حجیم دارم. یه مدیر آپلود بذار که نپره، بگه چقد گزشت چقد مونده و... کتابخونه لازم بود نصب کن"
+
+Work Log:
+- NEW /api/upload/stream (POST): streaming upload endpoint for big files — raw bytes straight to disk via pipeline(Readable.fromWeb → meter → createWriteStream). Flat memory (formData() buffered whole files in RAM), 200MB enforced BOTH early (content-length → instant 413) and mid-stream (byte meter → abort + cleanup), magic-byte capture from first 16 bytes, staging file (.staging-<uuid>) always cleaned on abort/oversize/invalid/db-failure, HTTP Range serving untouched
+- MAX_UPLOAD: 25MB → 200MB everywhere (single source: lib/media-process.ts, shared by both routes)
+- lib/media-process.ts extracted (detectKind, makeThumb, ffmpeg pipeline, processMedia) — old /api/upload refactored onto it (backward-compatible, same response shape), ffmpeg tuned for 200MB: -loglevel error -nostdin, veryfast preset + crf 23 for >64MB files, 15min timeout, 60s poster
+- serve-storage: dotfile guard (blocks .staging-* in-progress uploads from being served)
+- NEW client upload engine lib/upload-client.ts: XHR (real upload progress events, unlike fetch), EMA speed smoothing, ETA, no client timeout (slow links never killed), Persian byte/speed/ETA formatters — zero external libraries needed
+- NEW Upload Center (upload-center.tsx + lazy upload-center-panel.tsx): floating bottom-left manager — per-file percent bar, uploaded/total MB, live speed, remaining time, queue with 2 concurrent, cancel per file, retry failed files, processing state ("در حال پردازش روی سرور"), done auto-clear, oversize instant rejection, overall progress header, collapse toggle. Module-level store + useSyncExternalStore → progress ticks re-render ONLY the panel (site tree untouched — phone-friendly), panel chunk lazy-loaded (visitors pay 0 bytes)
+- Media library: multi-file select (multiple) + batch queue + live grid refresh via memorial:upload-done event; ImageUpload: inline progress bar + speed + cancel button; FontManager: percent display; all three show the ۲۰۰ مگابایت hint
+- Orphan guard: if the DB row insert fails after a file was saved, the file+thumb are deleted (found this live: 2 failed-500 attempts left 3 orphan files when the sandbox snapshot-restore had swapped the DB under the running server — fixed, orphans cleaned)
+- VERIFIED (curl + browser E2E on preview): stream upload 201 (image), mpeg4 video → auto h264+faststart 640x480 + poster + 206 Range; font upload 201; 413 with/without content-length (chunked meter caught at 200MB, 0 staging leftovers); 400 fake magic bytes; 401 unauth; .staging-* 404; live panel text: "۴٪ • ۴.۹ مگابایت از ۱۰۰.۰ مگابایت • ۱۴۰ کیلوبایت/ثانیه • ~۱۱ دقیقه و ۳۶ ثانیه باقی‌مانده"; cancel mid-flight → "لغو شد" + server cleanup; retry re-uploads with live stats; oversize 210MB → instant "حجم فایل بیش از ۲۰۰ مگابایت است"; done+auto-clear; grid auto-refresh; mobile 390px panel fits (359px wide, 16px gap, VLM-verified); 0 console errors; lint clean
+- DATA SAFETY: all 9 test rows/files/thumbs + test font deleted — media count back to exactly 25; user's real upload (198ff39f) still serving 200; db/custom.db, .env and public/uploads/* NOT committed
+
+Stage Summary:
+- Upload limit: 200MB per file (server-enforced both early and mid-stream)
+- Upload manager: floating center with percent, MB passed/remaining, live speed, ETA, queue (2 concurrent), cancel, retry, processing state — pure native XHR, no new dependencies
+- Big-file safety: disk streaming (no RAM spikes), abort-safe with guaranteed cleanup, orphan-proof, self-healing old route kept for compatibility
+- User's server: git pull + restart dev server once → new limit + upload manager live immediately

@@ -4,6 +4,7 @@ import "./globals.css";
 import "./fonts.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { UploadManager } from "@/components/memorial/admin/upload-center";
 import { db } from "@/lib/db";
 
 const vazirmatn = Vazirmatn({
@@ -105,6 +106,7 @@ export default function RootLayout({
         className={`${vazirmatn.variable} ${nastaliq.variable} font-sans antialiased bg-background text-foreground`}
       >
         {children}
+        <UploadManager />
         <Toaster />
         <SonnerToaster position="top-center" dir="rtl" />
       </body>

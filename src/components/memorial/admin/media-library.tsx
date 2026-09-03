@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Trash2, Pencil, Search, X, Upload, Image as ImageIcon, Film, Loader2, Folder, FolderPlus } from "lucide-react"
 import { toast } from "sonner"
 import type { MediaFile } from "@/lib/store"
 import { Card, Field, Input, Textarea, Select } from "./settings-editor"
 import { toPersianDigits } from "../biography-view"
+import { enqueueUpload } from "./upload-center"
 
 export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) {
   const [items, setItems] = useState<MediaFile[]>([])
@@ -21,6 +22,7 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
   const [uploadingCat, setUploadingCat] = useState("عمومی")
   const [newCatName, setNewCatName] = useState("")
   const [showNewCat, setShowNewCat] = useState(false)
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = async () => {
     setLoading(true); setError(null)
@@ -52,6 +54,19 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
     }
   }
 
+  // live refresh while the floating Upload Center finishes files (incl. retries)
+  useEffect(() => {
+    const schedule = () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current)
+      refreshTimer.current = setTimeout(() => { load(); onChanged() }, 400)
+    }
+    window.addEventListener("memorial:upload-done", schedule)
+    return () => {
+      window.removeEventListener("memorial:upload-done", schedule)
+      if (refreshTimer.current) clearTimeout(refreshTimer.current)
+    }
+  }, [])
+
   useEffect(() => { load() }, [])
 
   const filtered = items.filter((i) =>
@@ -60,16 +75,16 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
     (!q || (i.title ?? "").includes(q) || (i.description ?? "").includes(q) || i.url.includes(q))
   )
 
-  const onUpload = async (file: File) => {
-    const fd = new FormData()
-    fd.append("file", file)
-    fd.append("category", uploadingCat)
-    toast.loading("در حال آپلود...", { id: "up" })
-    const res = await fetch("/api/upload", { method: "POST", body: fd })
-    toast.dismiss("up")
-    if (!res.ok) { toast.error("آپلود ناموفق"); return }
-    toast.success("آپلود شد")
-    load(); onChanged()
+  // multi-file upload → queued in the floating Upload Center (progress/speed/cancel there)
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const arr = Array.from(files)
+    if (arr.length > 1) toast.info(`${toPersianDigits(arr.length)} فایل در صف آپلود قرار گرفت`)
+    const results = await Promise.allSettled(arr.map((f) => enqueueUpload(f, { category: uploadingCat })))
+    const ok = results.filter((r) => r.status === "fulfilled").length
+    const failed = arr.length - ok
+    if (ok > 0) toast.success(`${toPersianDigits(ok)} فایل آپلود شد`)
+    if (failed > 0) toast.error(`${toPersianDigits(failed)} فایل آپلود نشد`)
   }
 
   const save = async () => {
@@ -103,11 +118,11 @@ export function MediaLibrary({ onChanged }: { onChanged: () => Promise<void> }) 
   return (
     <div className="space-y-4">
       {/* Upload bar + category selector */}
-      <Card title="آپلود فایل" subtitle="فایل‌ها در دسته انتخابی ذخیره می‌شوند">
+      <Card title="آپلود فایل" subtitle="چند فایل با هم — حداکثر ۲۰۰ مگابایت برای هر فایل • پیشرفت در مرکز آپلود پایین صفحه">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex items-center gap-2 rounded-full bg-[oklch(0.39_0.085_168)] px-4 py-2 text-sm font-medium text-ivory cursor-pointer transition hover:bg-[oklch(0.33_0.08_170)] active:scale-95">
             <Upload className="h-4 w-4" /> انتخاب و آپلود
-            <input type="file" accept="image/*,video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.target.value = "" }} />
+            <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.target.value = "" }} />
           </label>
           <Field label="">
             <Select value={uploadingCat} onChange={(e) => setUploadingCat(e.target.value)} className="w-36">

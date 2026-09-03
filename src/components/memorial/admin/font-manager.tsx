@@ -5,12 +5,15 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Upload, Trash2, Loader2, Type, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Card, Field, Input } from "./settings-editor"
+import { enqueueUpload } from "./upload-center"
+import { faNum, fmtBytes, type UploadProgressInfo } from "@/lib/upload-client"
 
 export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
   const [name, setName] = useState("")
   const [label, setLabel] = useState("")
   const [url, setUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [prog, setProg] = useState<UploadProgressInfo | null>(null)
   const [saving, setSaving] = useState(false)
   const [fonts, setFonts] = useState<{ id: string; name: string; label: string; url: string }[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -34,15 +37,9 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
 
   const upload = async (file: File) => {
     setUploading(true)
+    setProg(null)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      if (!res.ok) {
-        const d = await res.json().catch(() => null)
-        throw new Error(d?.error || "آپلود ناموفق")
-      }
-      const data = (await res.json()) as { url: string }
+      const data = await enqueueUpload(file, { onProgress: (p) => setProg(p) })
       setUrl(data.url)
       // suggest name/label from filename
       const base = file.name.replace(/\.[^.]+$/, "")
@@ -53,9 +50,11 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
       if (!label) setLabel(base)
       toast.success("فایل آپلود شد — حالا نام و برچسب را تنظیم و ذخیره کنید")
     } catch (e) {
-      toast.error((e as Error).message)
+      const err = e as Error
+      if (err?.name !== "AbortError") toast.error(err?.message || "آپلود ناموفق بود")
     } finally {
       setUploading(false)
+      setProg(null)
     }
   }
 
@@ -120,8 +119,24 @@ export function FontManager({ onChanged }: { onChanged: () => Promise<void> }) {
             disabled={uploading}
             className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[oklch(0.74_0.135_82/0.3)] bg-ivory/50 py-8 text-muted-foreground transition hover:border-[oklch(0.74_0.135_82/0.6)] hover:bg-ivory disabled:opacity-60"
           >
-            {uploading ? <Loader2 className="h-6 w-6 animate-spin text-[oklch(0.74_0.135_82)]" /> : <Upload className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" />}
-            <span className="text-sm">{uploading ? "در حال آپلود..." : "انتخاب فایل TTF/OTF"}</span>
+            {uploading ? (
+              <>
+                <Loader2 className="h-6 w-6 animate-spin text-[oklch(0.74_0.135_82)]" />
+                <span className="text-sm font-medium text-[oklch(0.36_0.07_168)]">
+                  {prog ? `در حال آپلود — ${faNum(prog.percent)}٪ (${fmtBytes(prog.loaded)} از ${fmtBytes(prog.total)})` : "در حال آپلود..."}
+                </span>
+                {prog && (
+                  <span className="h-1.5 w-40 overflow-hidden rounded-full bg-[oklch(0.93_0.02_82)]">
+                    <span className="block h-full rounded-full bg-[oklch(0.39_0.085_168)] transition-[width] duration-150" style={{ width: `${prog.percent}%` }} />
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <Upload className="h-6 w-6 text-[oklch(0.74_0.135_82/0.6)]" />
+                <span className="text-sm">انتخاب فایل TTF/OTF</span>
+              </>
+            )}
           </button>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
