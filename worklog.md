@@ -511,3 +511,20 @@ Work Log:
 Stage Summary:
 - EMPTY-page root cause fixed: SSR now renders the complete site (nav, hero, sections, footer) in the initial HTML with no dependency on client JS
 - Preview verified end-to-end on mobile viewport including the bottom navigation bar
+
+---
+Task ID: 10 (session 5)
+Agent: main (Z.ai Code)
+Task: User: "عکسهایی که آپلود میکنم لود نمیشن — اپلود میشه ولی سمت کاربر نشون نمیده" (slider + gallery). Project is LIVE on their server via git — don't break it, don't touch the data
+
+Work Log:
+- ROOT CAUSE: Next.js only serves public/ files that existed at BUILD time (documented for `next start`/standalone). Uploads are written at RUNTIME → their URLs (/uploads/<uuid>.png) 404 on any built/deployed instance → images/videos never display for visitors even though the POST returns 201. Dev appears fine only because the dev static handler checks the filesystem live — which is why it "uploaded fine" in dev but broke on the deployed server
+- FIX (additive, zero data/URL changes): catch-all route handlers /uploads/[...file] and /fonts/[...file] stream files from disk whenever the static handler misses — correct MIME, immutable cache, full HTTP Range (video seeking), traversal-guarded. lib/storage.ts resolves the storage dir from ANY start mode (dev / next start / node .next/standalone/server.js) via the prisma/schema.prisma marker so write side and read side always agree. api/upload now writes via storageDir()
+- Verified: 8 unit cases (200 / 206 range / 404 traversal+missing / 416 / thumbs / fonts); live login→upload 201→file+thumb serve 200; video Range 206; dev.log proves requests fall through static into the route (compile line); user's real upload from this morning (198ff39f) serving 200; lint clean
+- DATA SAFETY: db/custom.db, .env and the user's uploaded file intentionally NOT committed — their server holds live data, git pull stays conflict-free
+- Committed code only, pushed to AbstractAxisX/memorial-abolfazl-dahnavi (fast-forward on top of user's history)
+
+Stage Summary:
+- Uploaded media now loads for visitors on ANY deployment (dev, next start, standalone) — the runtime static-serving gap is closed by the disk-streaming routes
+- No URLs, no DB rows, no migration: existing committed media keeps the fast static path; runtime uploads get the route path
+- Deploy note: after pulling this commit, restart the dev server once (or rebuild for production: bun run build) so the new routes are picked up

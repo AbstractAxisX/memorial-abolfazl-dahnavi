@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth"
 import { json } from "@/lib/api"
 import { db } from "@/lib/db"
+import { storageDir } from "@/lib/storage"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { randomUUID } from "crypto"
@@ -71,7 +72,10 @@ export async function POST(req: Request) {
   }
 
   const subdir = kind === "font" ? "fonts" : "uploads"
-  const dir = path.join(process.cwd(), "public", subdir)
+  // storageDir() resolves the project root from ANY start mode (dev, next
+  // start, node .next/standalone/server.js) — the write side and the
+  // /uploads|/fonts route handlers always agree on the same directory.
+  const dir = storageDir(subdir)
   await mkdir(dir, { recursive: true })
   const filename = `${randomUUID()}.${ext}`
   const filepath = path.join(dir, filename)
@@ -93,7 +97,7 @@ export async function POST(req: Request) {
       width = meta.width ?? null
       height = meta.height ?? null
     } catch { /* ignore */ }
-    const thumbsDir = path.join(process.cwd(), "public", "uploads", "thumbs")
+    const thumbsDir = storageDir("uploads") + path.sep + "thumbs"
     await mkdir(thumbsDir, { recursive: true })
     const thumbPath = path.join(thumbsDir, filename.replace(/\.[^.]+$/, "") + ".webp")
     if (await makeThumb(filepath, thumbPath)) {
